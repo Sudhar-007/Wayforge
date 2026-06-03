@@ -33,7 +33,7 @@ export function ViewerHeader() {
   const saveDisabled = saveStatus === "saving" || saveStatus === "saved";
 
   return (
-    <header className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 px-6 pb-6 pt-8">
+    <header className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-6 pl-16 pr-6 pt-8">
       <div className="flex items-start gap-4">
         <button
           onClick={() => setView("intake")}

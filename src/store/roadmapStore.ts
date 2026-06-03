@@ -3,6 +3,7 @@ import type {
   Roadmap,
   RoadmapNode,
   RoadmapResource,
+  RoadmapListItem,
   NodeStatus,
   NodeType,
   EdgeType,
@@ -45,7 +46,14 @@ export interface BranchInput {
 }
 
 /** Which top-level screen is showing. */
-export type AppView = "home" | "login" | "intake" | "loading" | "viewer";
+export type AppView =
+  | "home"
+  | "login"
+  | "intake"
+  | "loading"
+  | "viewer"
+  | "profile"
+  | "myRoadmaps";
 
 /** Authenticated user, mirroring the backend's UserResponse schema. */
 export interface User {
@@ -106,6 +114,13 @@ interface RoadmapStore {
   saveStatus: "idle" | "saving" | "saved" | "error";
   saveRoadmapToAccount: () => Promise<void>;
 
+  // The signed-in user's saved roadmaps (My Roadmaps screen).
+  myRoadmaps: RoadmapListItem[];
+  myRoadmapsStatus: "idle" | "loading" | "error";
+  loadMyRoadmaps: () => Promise<void>;
+  openRoadmap: (id: string) => Promise<void>;
+  deleteRoadmap: (id: string) => Promise<void>;
+
   loadRoadmap: (roadmap: Roadmap) => void;
   selectNode: (id: string | null) => void;
 
@@ -154,6 +169,9 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
 
   savedRoadmapId: null,
   saveStatus: "idle",
+
+  myRoadmaps: [],
+  myRoadmapsStatus: "idle",
 
   setAuth: (user, token) => {
     localStorage.setItem(TOKEN_STORAGE_KEY, token);
@@ -231,6 +249,77 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
     } catch (err) {
       console.error("[saveRoadmapToAccount]", err);
       set({ saveStatus: "error" });
+    }
+  },
+
+  // Fetch the signed-in user's saved roadmaps (lightweight list rows) for the
+  // My Roadmaps screen. Status drives the loading skeleton / empty / error UI.
+  loadMyRoadmaps: async () => {
+    const { token } = get();
+    if (!token) return;
+
+    set({ myRoadmapsStatus: "loading" });
+    try {
+      const res = await fetch(`${API_BASE_URL}/roadmaps`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`List failed (${res.status})`);
+      const items = (await res.json()) as RoadmapListItem[];
+      set({ myRoadmaps: items, myRoadmapsStatus: "idle" });
+    } catch (err) {
+      console.error("[loadMyRoadmaps]", err);
+      set({ myRoadmapsStatus: "error" });
+    }
+  },
+
+  // Load a saved roadmap into the viewer. GET /roadmaps/{id} returns the full
+  // RoadmapResponse; the graph lives in `.data`. We also hydrate `form` so the
+  // viewer header subtitle is correct, and mark it as the currently-saved row.
+  openRoadmap: async (id) => {
+    const { token, loadRoadmap } = get();
+    if (!token) return;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/roadmaps/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`Open failed (${res.status})`);
+      const saved = await res.json();
+
+      loadRoadmap(saved.data as Roadmap);
+      set({
+        form: {
+          topic: saved.topic ?? "",
+          level: saved.level ?? "Beginner",
+          weekly: saved.weekly ?? "1-3 hours",
+          goal: saved.goal ?? "",
+          focus: saved.focus ?? "",
+        },
+        savedRoadmapId: saved.id,
+        saveStatus: "idle",
+        view: "viewer",
+      });
+    } catch (err) {
+      console.error("[openRoadmap]", err);
+    }
+  },
+
+  // Delete a saved roadmap, then refresh the list so the UI reflects the change.
+  deleteRoadmap: async (id) => {
+    const { token, loadMyRoadmaps } = get();
+    if (!token) return;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/roadmaps/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok && res.status !== 204) {
+        throw new Error(`Delete failed (${res.status})`);
+      }
+      await loadMyRoadmaps();
+    } catch (err) {
+      console.error("[deleteRoadmap]", err);
     }
   },
 

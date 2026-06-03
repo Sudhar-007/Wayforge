@@ -59,3 +59,18 @@ export interface Roadmap {
   nodes: RoadmapNode[];
   edges: RoadmapEdge[];
 }
+
+/**
+ * Lightweight list-view row for a saved roadmap, mirroring the backend's
+ * `RoadmapListItem` schema (omits the heavy `data` document, adds derived
+ * `progress_percentage`). Returned by `GET /roadmaps`.
+ */
+export interface RoadmapListItem {
+  id: string;
+  title: string;
+  topic: string | null;
+  level: string | null;
+  created_at: string;
+  updated_at: string;
+  progress_percentage: number;
+}

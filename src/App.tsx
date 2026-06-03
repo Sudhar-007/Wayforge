@@ -10,6 +10,9 @@ import { Login } from "./components/Login";
 import { Intake } from "./components/Intake";
 import { Loading } from "./components/Loading";
 import { ViewerHeader } from "./components/ViewerHeader";
+import { Profile } from "./components/Profile";
+import { MyRoadmaps } from "./components/MyRoadmaps";
+import { AppMenu } from "./components/AppMenu";
 import type { Roadmap } from "./types/roadmap";
 
 export default function App() {
@@ -71,10 +74,18 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 antialiased">
+      {/* Single source of truth for the nav menu; renders null when logged out.
+          Fixed in the top-left corner so it overlays every logged-in screen. */}
+      <div className="fixed left-4 top-4 z-50">
+        <AppMenu />
+      </div>
+
       {view === "home" && <Home />}
       {view === "login" && <Login />}
       {view === "intake" && <Intake />}
       {view === "loading" && <Loading />}
+      {view === "profile" && <Profile />}
+      {view === "myRoadmaps" && <MyRoadmaps />}
       {view === "viewer" && (
         <div className="flex h-screen flex-col">
           <ViewerHeader />
