@@ -35,10 +35,6 @@ env/
 secrets.json
 credentials.json
 
-# Doppler
-.doppler.yaml
-doppler.yaml
-
 # IDE
 .vscode/
 .idea/
@@ -69,3 +65,9 @@ htmlcov/
 # Temp files
 *.tmp
 *.bak
+
+# Windows device names that git can misreport as untracked files
+nul
+con
+prn
+aux

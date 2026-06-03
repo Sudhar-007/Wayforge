@@ -2,58 +2,58 @@
 
 ## API Keys & Environment Variables
 
-This project uses **Doppler** for secure secret management. Never commit API keys directly.
+This project loads secrets from a local **`.env`** file (read via `python-dotenv`).
+Never commit API keys directly.
 
 ### Setup for Development
 
-1. **Install Doppler CLI**
+1. **Create your env file**
+
+   Copy the example and fill in your real keys:
+
    ```bash
    # Windows (PowerShell)
-   scoop install doppler
+   Copy-Item backend/.env.example backend/.env
 
-   # Mac
-   brew install doppler
-
-   # Or download from: https://doppler.com/docs/install-cli
+   # Mac / Linux
+   cp backend/.env.example backend/.env
    ```
 
-2. **Login to Doppler**
+2. **Add your secrets to `backend/.env`**
+
+   ```dotenv
+   GEMINI_API_KEY=your-gemini-api-key-here
+   SERPER_API_KEY=your-serper-api-key-here
+   # Optional: override the default model
+   # GEMINI_MODEL=gemini-2.0-flash-lite
+   ```
+
+3. **Run the backend**
+
    ```bash
-   doppler login
+   cd backend
+   python main.py
    ```
 
-3. **Setup Doppler for this project**
-   ```bash
-   cd PathFinder/backend
-   doppler setup
-   ```
-
-4. **Add your secrets to Doppler**
-   ```bash
-   doppler secrets set SERPER_API_KEY=your_key_here
-   ```
-
-5. **Run the backend with Doppler**
-   ```bash
-   doppler run -- python main.py
-   ```
+   `load_dotenv()` in `main.py` automatically picks up `backend/.env`.
 
 ### Required Environment Variables
 
+- `GEMINI_API_KEY`: API key for Google Gemini (roadmap generation)
+  - Get it from: https://aistudio.google.com/apikey
 - `SERPER_API_KEY`: API key for Serper (Google Search API)
-  - Get it from: https://serper.dev/
+  - Get it from: https://serper.dev/dashboard
 
 ### What's Protected
 
 ✅ **Safe to commit:**
 - All `.py` files (use `os.environ.get()`)
-- Configuration files without secrets
+- `.env.example` template files (no real keys)
 - `.gitignore`
 
 ❌ **NEVER commit:**
-- `.env` files
+- `.env` files (already gitignored)
 - Any file with `API_KEY` or `SECRET` in plain text
-- Doppler configuration files (`.doppler.yaml`)
 - Shell scripts with hardcoded keys
 
 ### Before Pushing to GitHub
@@ -61,22 +61,19 @@ This project uses **Doppler** for secure secret management. Never commit API key
 Run this checklist:
 
 ```bash
-# 1. Check for accidentally committed secrets
-git secrets --scan
+# 1. Verify no .env files are tracked
+git ls-files | grep .env
 
 # 2. Check .gitignore is working
 git status
 
-# 3. Verify no .env files are staged
-git ls-files | grep .env
-
-# 4. Search for potential API keys in code
+# 3. Search for potential API keys hardcoded in code
 grep -r "API_KEY.*=" . --include="*.py" | grep -v "os.environ"
 ```
 
 ### If You Accidentally Commit a Secret
 
-1. **Immediately revoke the API key** at the provider (Serper)
+1. **Immediately revoke the API key** at the provider (Gemini / Serper)
 2. Remove from git history:
    ```bash
    git filter-branch --force --index-filter \
@@ -91,8 +88,7 @@ grep -r "API_KEY.*=" . --include="*.py" | grep -v "os.environ"
 
 ### For Production Deployment
 
-- Use Doppler's CI/CD integrations
-- Never use `set` or `export` in deployment scripts
+- Never use `set` or `export` with hardcoded keys in deployment scripts
 - Use platform-native secret managers:
   - **Vercel**: Environment Variables in dashboard
   - **Railway**: Variables tab

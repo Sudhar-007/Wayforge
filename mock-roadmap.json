@@ -1,0 +1,327 @@
+{
+  "id": "f0e8c2a1-3b4d-4f6a-9c1e-2d5b7a8f9011",
+  "title": "Frontend Developer Roadmap",
+  "description": "A step-by-step guide to becoming a modern frontend developer, covering the fundamentals of the web, core languages, tooling, and frameworks.",
+  "nodes": [
+    {
+      "id": "a1b2c3d4-0001-4a1b-8c2d-000000000001",
+      "title": "Web Fundamentals",
+      "description": "Section covering the foundational technologies of the web before diving into tooling and frameworks.",
+      "type": "section_header",
+      "status": "completed",
+      "resources": []
+    },
+    {
+      "id": "a1b2c3d4-0002-4a1b-8c2d-000000000002",
+      "title": "How the Web Works",
+      "description": "Understand the **request/response cycle**, DNS, HTTP/HTTPS, and what happens when you type a URL into the browser.",
+      "type": "primary",
+      "status": "completed",
+      "resources": [
+        {
+          "label": "How the Web Works (MDN)",
+          "url": "https://developer.mozilla.org/en-US/docs/Learn/Getting_started_with_the_web/How_the_Web_works",
+          "type": "docs"
+        }
+      ]
+    },
+    {
+      "id": "a1b2c3d4-0003-4a1b-8c2d-000000000003",
+      "title": "HTML",
+      "description": "Learn semantic markup, document structure, forms, and accessibility basics. HTML is the skeleton of every web page.",
+      "type": "primary",
+      "status": "completed",
+      "resources": [
+        {
+          "label": "HTML on MDN",
+          "url": "https://developer.mozilla.org/en-US/docs/Web/HTML",
+          "type": "docs"
+        }
+      ]
+    },
+    {
+      "id": "a1b2c3d4-0004-4a1b-8c2d-000000000004",
+      "title": "Accessibility (a11y)",
+      "description": "Optional but highly recommended: learn ARIA roles, keyboard navigation, and semantic HTML for inclusive interfaces.",
+      "type": "secondary",
+      "status": "not_started",
+      "resources": []
+    },
+    {
+      "id": "a1b2c3d4-0005-4a1b-8c2d-000000000005",
+      "title": "CSS",
+      "description": "Style web pages with selectors, the box model, layout systems (`flexbox`, `grid`), and responsive design.",
+      "type": "primary",
+      "status": "in_progress",
+      "resources": [
+        {
+          "label": "CSS-Tricks: A Complete Guide to Flexbox",
+          "url": "https://css-tricks.com/snippets/css/a-guide-to-flexbox/",
+          "type": "article"
+        }
+      ]
+    },
+    {
+      "id": "a1b2c3d4-0006-4a1b-8c2d-000000000006",
+      "title": "Responsive Design",
+      "description": "Use media queries, fluid units, and mobile-first principles so layouts adapt across screen sizes.",
+      "type": "secondary",
+      "status": "not_started",
+      "resources": []
+    },
+    {
+      "id": "a1b2c3d4-0007-4a1b-8c2d-000000000007",
+      "title": "CSS Preprocessors & Frameworks",
+      "description": "Optional: explore Sass, Tailwind CSS, or CSS Modules to scale styling on larger projects.",
+      "type": "secondary",
+      "status": "skipped",
+      "resources": []
+    },
+    {
+      "id": "a1b2c3d4-0008-4a1b-8c2d-000000000008",
+      "title": "JavaScript",
+      "description": "The programming language of the web. Cover variables, functions, the DOM, events, and asynchronous code (`Promises`, `async/await`).",
+      "type": "primary",
+      "status": "in_progress",
+      "resources": [
+        {
+          "label": "JavaScript.info",
+          "url": "https://javascript.info/",
+          "type": "course"
+        }
+      ]
+    },
+    {
+      "id": "a1b2c3d4-0009-4a1b-8c2d-000000000009",
+      "title": "DOM Manipulation",
+      "description": "Select, create, and update elements; handle events; and understand event delegation and bubbling.",
+      "type": "primary",
+      "status": "not_started",
+      "resources": []
+    },
+    {
+      "id": "a1b2c3d4-0010-4a1b-8c2d-000000000010",
+      "title": "Fetch & APIs",
+      "description": "Communicate with servers using the `fetch` API, handle JSON, and work with REST endpoints.",
+      "type": "primary",
+      "status": "not_started",
+      "resources": []
+    },
+    {
+      "id": "a1b2c3d4-0011-4a1b-8c2d-000000000011",
+      "title": "TypeScript",
+      "description": "Optional: add static typing on top of JavaScript for safer, more maintainable codebases.",
+      "type": "secondary",
+      "status": "not_started",
+      "resources": []
+    },
+    {
+      "id": "a1b2c3d4-0012-4a1b-8c2d-000000000012",
+      "title": "Tooling & Workflow",
+      "description": "Section covering the developer tooling that supports modern frontend work.",
+      "type": "section_header",
+      "status": "not_started",
+      "resources": []
+    },
+    {
+      "id": "a1b2c3d4-0013-4a1b-8c2d-000000000013",
+      "title": "Version Control (Git)",
+      "description": "Track changes, branch, merge, and collaborate. Learn the core workflow and a platform like GitHub or GitLab.",
+      "type": "primary",
+      "status": "completed",
+      "resources": [
+        {
+          "label": "Git & GitHub Crash Course",
+          "url": "https://www.youtube.com/watch?v=RGOj5yH7evk",
+          "type": "video"
+        }
+      ]
+    },
+    {
+      "id": "a1b2c3d4-0014-4a1b-8c2d-000000000014",
+      "title": "Package Managers",
+      "description": "Use `npm`, `pnpm`, or `yarn` to manage project dependencies and scripts.",
+      "type": "primary",
+      "status": "not_started",
+      "resources": []
+    },
+    {
+      "id": "a1b2c3d4-0015-4a1b-8c2d-000000000015",
+      "title": "Build Tools & Bundlers",
+      "description": "Understand modern bundlers like **Vite** and Webpack: dev servers, hot module replacement, and production builds.",
+      "type": "primary",
+      "status": "not_started",
+      "resources": []
+    },
+    {
+      "id": "a1b2c3d4-0016-4a1b-8c2d-000000000016",
+      "title": "Linters & Formatters",
+      "description": "Optional: enforce consistency with ESLint and Prettier across a team.",
+      "type": "secondary",
+      "status": "not_started",
+      "resources": []
+    },
+    {
+      "id": "a1b2c3d4-0017-4a1b-8c2d-000000000017",
+      "title": "Frameworks",
+      "description": "Section covering component-based UI frameworks and the ecosystem around them.",
+      "type": "section_header",
+      "status": "not_started",
+      "resources": []
+    },
+    {
+      "id": "a1b2c3d4-0018-4a1b-8c2d-000000000018",
+      "title": "Pick a Framework (React / Vue / Svelte)",
+      "description": "Learn a component-based framework. **React** is the most in-demand, but Vue and Svelte are excellent alternatives.",
+      "type": "primary",
+      "status": "not_started",
+      "resources": []
+    },
+    {
+      "id": "a1b2c3d4-0019-4a1b-8c2d-000000000019",
+      "title": "State Management",
+      "description": "Optional: manage shared application state with tools like Redux, Zustand, or Pinia as apps grow.",
+      "type": "secondary",
+      "status": "not_started",
+      "resources": []
+    },
+    {
+      "id": "a1b2c3d4-0020-4a1b-8c2d-000000000020",
+      "title": "Testing",
+      "description": "Write unit and integration tests with tools like Vitest, Jest, and Testing Library.",
+      "type": "primary",
+      "status": "not_started",
+      "resources": []
+    },
+    {
+      "id": "a1b2c3d4-0021-4a1b-8c2d-000000000021",
+      "title": "Deployment",
+      "description": "Ship your app to the web using platforms like Netlify, Vercel, or Cloudflare Pages with CI/CD.",
+      "type": "primary",
+      "status": "not_started",
+      "resources": []
+    }
+  ],
+  "edges": [
+    {
+      "id": "e000-0001",
+      "source": "a1b2c3d4-0001-4a1b-8c2d-000000000001",
+      "target": "a1b2c3d4-0002-4a1b-8c2d-000000000002",
+      "type": "required"
+    },
+    {
+      "id": "e000-0002",
+      "source": "a1b2c3d4-0002-4a1b-8c2d-000000000002",
+      "target": "a1b2c3d4-0003-4a1b-8c2d-000000000003",
+      "type": "required"
+    },
+    {
+      "id": "e000-0003",
+      "source": "a1b2c3d4-0003-4a1b-8c2d-000000000003",
+      "target": "a1b2c3d4-0004-4a1b-8c2d-000000000004",
+      "type": "optional"
+    },
+    {
+      "id": "e000-0004",
+      "source": "a1b2c3d4-0003-4a1b-8c2d-000000000003",
+      "target": "a1b2c3d4-0005-4a1b-8c2d-000000000005",
+      "type": "required"
+    },
+    {
+      "id": "e000-0005",
+      "source": "a1b2c3d4-0005-4a1b-8c2d-000000000005",
+      "target": "a1b2c3d4-0006-4a1b-8c2d-000000000006",
+      "type": "optional"
+    },
+    {
+      "id": "e000-0006",
+      "source": "a1b2c3d4-0005-4a1b-8c2d-000000000005",
+      "target": "a1b2c3d4-0007-4a1b-8c2d-000000000007",
+      "type": "optional"
+    },
+    {
+      "id": "e000-0007",
+      "source": "a1b2c3d4-0005-4a1b-8c2d-000000000005",
+      "target": "a1b2c3d4-0008-4a1b-8c2d-000000000008",
+      "type": "required"
+    },
+    {
+      "id": "e000-0008",
+      "source": "a1b2c3d4-0008-4a1b-8c2d-000000000008",
+      "target": "a1b2c3d4-0009-4a1b-8c2d-000000000009",
+      "type": "required"
+    },
+    {
+      "id": "e000-0009",
+      "source": "a1b2c3d4-0009-4a1b-8c2d-000000000009",
+      "target": "a1b2c3d4-0010-4a1b-8c2d-000000000010",
+      "type": "required"
+    },
+    {
+      "id": "e000-0010",
+      "source": "a1b2c3d4-0008-4a1b-8c2d-000000000008",
+      "target": "a1b2c3d4-0011-4a1b-8c2d-000000000011",
+      "type": "optional"
+    },
+    {
+      "id": "e000-0011",
+      "source": "a1b2c3d4-0010-4a1b-8c2d-000000000010",
+      "target": "a1b2c3d4-0012-4a1b-8c2d-000000000012",
+      "type": "required"
+    },
+    {
+      "id": "e000-0012",
+      "source": "a1b2c3d4-0012-4a1b-8c2d-000000000012",
+      "target": "a1b2c3d4-0013-4a1b-8c2d-000000000013",
+      "type": "required"
+    },
+    {
+      "id": "e000-0013",
+      "source": "a1b2c3d4-0013-4a1b-8c2d-000000000013",
+      "target": "a1b2c3d4-0014-4a1b-8c2d-000000000014",
+      "type": "required"
+    },
+    {
+      "id": "e000-0014",
+      "source": "a1b2c3d4-0014-4a1b-8c2d-000000000014",
+      "target": "a1b2c3d4-0015-4a1b-8c2d-000000000015",
+      "type": "required"
+    },
+    {
+      "id": "e000-0015",
+      "source": "a1b2c3d4-0015-4a1b-8c2d-000000000015",
+      "target": "a1b2c3d4-0016-4a1b-8c2d-000000000016",
+      "type": "optional"
+    },
+    {
+      "id": "e000-0016",
+      "source": "a1b2c3d4-0015-4a1b-8c2d-000000000015",
+      "target": "a1b2c3d4-0017-4a1b-8c2d-000000000017",
+      "type": "required"
+    },
+    {
+      "id": "e000-0017",
+      "source": "a1b2c3d4-0017-4a1b-8c2d-000000000017",
+      "target": "a1b2c3d4-0018-4a1b-8c2d-000000000018",
+      "type": "required"
+    },
+    {
+      "id": "e000-0018",
+      "source": "a1b2c3d4-0018-4a1b-8c2d-000000000018",
+      "target": "a1b2c3d4-0019-4a1b-8c2d-000000000019",
+      "type": "optional"
+    },
+    {
+      "id": "e000-0019",
+      "source": "a1b2c3d4-0018-4a1b-8c2d-000000000018",
+      "target": "a1b2c3d4-0020-4a1b-8c2d-000000000020",
+      "type": "required"
+    },
+    {
+      "id": "e000-0020",
+      "source": "a1b2c3d4-0020-4a1b-8c2d-000000000020",
+      "target": "a1b2c3d4-0021-4a1b-8c2d-000000000021",
+      "type": "required"
+    }
+  ]
+}

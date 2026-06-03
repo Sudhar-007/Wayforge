@@ -3,14 +3,7 @@ import asyncio
 import os
 from typing import List, Dict
 
-# Try Doppler first, fallback to environment variable
-try:
-    from doppler_sdk import DopplerSDK
-    doppler = DopplerSDK()
-    SERPER_API_KEY = doppler.secrets.get("SERPER_API_KEY")
-except (ImportError, Exception):
-    # Fallback to environment variable (for doppler run -- python main.py)
-    SERPER_API_KEY = os.environ.get("SERPER_API_KEY")
+SERPER_API_KEY = os.environ.get("SERPER_API_KEY")
 
 
 async def search_single(client: httpx.AsyncClient, query: str) -> List[Dict]:
