@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRoadmapStore } from "../store/roadmapStore";
 import type { RoadmapListItem } from "../types/roadmap";
 
@@ -68,6 +68,10 @@ export function MyRoadmaps() {
 function RoadmapCard({ item }: { item: RoadmapListItem }) {
   const openRoadmap = useRoadmapStore((s) => s.openRoadmap);
   const deleteRoadmap = useRoadmapStore((s) => s.deleteRoadmap);
+  const renameRoadmapById = useRoadmapStore((s) => s.renameRoadmapById);
+
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(item.title);
 
   const subtitle = [item.topic, item.level].filter(Boolean).join(" · ");
   const created = new Date(item.created_at).toLocaleDateString(undefined, {
@@ -82,9 +86,46 @@ function RoadmapCard({ item }: { item: RoadmapListItem }) {
     }
   };
 
+  const startEditing = () => {
+    setDraft(item.title);
+    setEditing(true);
+  };
+
+  const commit = () => {
+    setEditing(false);
+    if (draft.trim() && draft.trim() !== item.title) {
+      void renameRoadmapById(item.id, draft);
+    }
+  };
+
   return (
     <div className="flex flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300 hover:shadow-md">
-      <h2 className="text-base font-semibold text-slate-900">{item.title}</h2>
+      {editing ? (
+        <input
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commit();
+            if (e.key === "Escape") setEditing(false);
+          }}
+          className="w-full rounded-md border border-slate-300 px-2 py-1 text-base font-semibold text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          aria-label="Roadmap title"
+        />
+      ) : (
+        <div className="group flex items-start justify-between gap-2">
+          <h2 className="text-base font-semibold text-slate-900">{item.title}</h2>
+          <button
+            onClick={startEditing}
+            title="Rename"
+            aria-label="Rename roadmap"
+            className="mt-0.5 shrink-0 rounded p-1 text-slate-400 opacity-0 transition hover:text-slate-600 focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-indigo-500 group-hover:opacity-100"
+          >
+            <PencilIcon />
+          </button>
+        </div>
+      )}
       {subtitle && (
         <p className="mt-1 text-sm text-slate-600">{subtitle}</p>
       )}
@@ -118,6 +159,25 @@ function RoadmapCard({ item }: { item: RoadmapListItem }) {
         </button>
       </div>
     </div>
+  );
+}
+
+function PencilIcon() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+    </svg>
   );
 }
 

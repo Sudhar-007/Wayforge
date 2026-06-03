@@ -109,10 +109,19 @@ interface RoadmapStore {
   loadCurrentUser: () => Promise<void>;
   initiateGitHubLogin: () => Promise<void>;
 
-  // Saving the current roadmap to the user's account.
+  // Saving the current roadmap to the user's account. `savedRoadmapId` + `isDirty`
+  // are the source of truth for the save button; `saveStatus` only carries the
+  // transient saving/error states (success resets it to "idle").
   savedRoadmapId: string | null;
-  saveStatus: "idle" | "saving" | "saved" | "error";
+  saveStatus: "idle" | "saving" | "error";
+  /** True when the loaded roadmap has edits not yet persisted. */
+  isDirty: boolean;
+  /** POST a new row (first save, and the "Save as new copy" choice). */
   saveRoadmapToAccount: () => Promise<void>;
+  /** PATCH the existing saved row in place (the "Update saved roadmap" choice). */
+  updateSavedRoadmap: () => Promise<void>;
+  /** Rename the open roadmap; persists immediately if it's already saved. */
+  renameRoadmapTitle: (title: string) => Promise<void>;
 
   // The signed-in user's saved roadmaps (My Roadmaps screen).
   myRoadmaps: RoadmapListItem[];
@@ -120,6 +129,8 @@ interface RoadmapStore {
   loadMyRoadmaps: () => Promise<void>;
   openRoadmap: (id: string) => Promise<void>;
   deleteRoadmap: (id: string) => Promise<void>;
+  /** Rename a saved roadmap by id (My Roadmaps cards), then refresh the list. */
+  renameRoadmapById: (id: string, title: string) => Promise<void>;
 
   loadRoadmap: (roadmap: Roadmap) => void;
   selectNode: (id: string | null) => void;
@@ -169,6 +180,7 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
 
   savedRoadmapId: null,
   saveStatus: "idle",
+  isDirty: false,
 
   myRoadmaps: [],
   myRoadmapsStatus: "idle",
@@ -215,10 +227,11 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
     window.location.href = url;
   },
 
-  // Persist the current roadmap to the signed-in user's account via POST
-  // /roadmaps. Basic flow only — always creates a new row (no override yet). The
-  // body matches the backend RoadmapCreate schema; `data` is the full live
-  // roadmap so saved progress reflects any inline edits.
+  // Persist the current roadmap as a NEW row via POST /roadmaps. Used for the
+  // first save and for the "Save as new copy" choice. The body matches the
+  // backend RoadmapCreate schema; `data` is the full live roadmap so saved
+  // progress reflects any inline edits. Success clears the dirty flag and points
+  // savedRoadmapId at the freshly created row.
   saveRoadmapToAccount: async () => {
     const { roadmap, form, token } = get();
     if (!token || !roadmap) return;
@@ -245,10 +258,73 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
       if (!res.ok) throw new Error(`Save failed (${res.status})`);
 
       const saved = await res.json();
-      set({ savedRoadmapId: saved.id, saveStatus: "saved" });
+      set({ savedRoadmapId: saved.id, saveStatus: "idle", isDirty: false });
     } catch (err) {
       console.error("[saveRoadmapToAccount]", err);
       set({ saveStatus: "error" });
+    }
+  },
+
+  // Overwrite the existing saved row in place via PATCH /roadmaps/{id}. Used for
+  // the "Update saved roadmap" choice. Sends the full mutable body so data and
+  // metadata stay in sync. Success clears the dirty flag.
+  updateSavedRoadmap: async () => {
+    const { roadmap, form, token, savedRoadmapId } = get();
+    if (!token || !roadmap || !savedRoadmapId) return;
+
+    set({ saveStatus: "saving" });
+    try {
+      const res = await fetch(`${API_BASE_URL}/roadmaps/${savedRoadmapId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: roadmap.title || `${form.topic} Roadmap`,
+          topic: form.topic,
+          level: form.level,
+          weekly: form.weekly,
+          goal: form.goal,
+          focus: form.focus,
+          data: roadmap,
+        }),
+      });
+
+      if (!res.ok) throw new Error(`Update failed (${res.status})`);
+
+      set({ saveStatus: "idle", isDirty: false });
+    } catch (err) {
+      console.error("[updateSavedRoadmap]", err);
+      set({ saveStatus: "error" });
+    }
+  },
+
+  // Rename the currently open roadmap. Updates local state immediately; if the
+  // roadmap is already saved, persists the title on its own via a partial PATCH.
+  // Leaves `isDirty` untouched — any other pending edits still need a full save.
+  renameRoadmapTitle: async (title) => {
+    const { roadmap, token, savedRoadmapId } = get();
+    if (!roadmap) return;
+
+    const trimmed = title.trim();
+    if (!trimmed || trimmed === roadmap.title) return;
+
+    set({ roadmap: { ...roadmap, title: trimmed } });
+
+    if (!savedRoadmapId || !token) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/roadmaps/${savedRoadmapId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ title: trimmed }),
+      });
+      if (!res.ok) throw new Error(`Rename failed (${res.status})`);
+    } catch (err) {
+      console.error("[renameRoadmapTitle]", err);
     }
   },
 
@@ -273,8 +349,10 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
   },
 
   // Load a saved roadmap into the viewer. GET /roadmaps/{id} returns the full
-  // RoadmapResponse; the graph lives in `.data`. We also hydrate `form` so the
-  // viewer header subtitle is correct, and mark it as the currently-saved row.
+  // RoadmapResponse; the graph lives in `.data`. The top-level `title` column is
+  // authoritative (a title-only rename updates it without touching `data.title`),
+  // so it wins when hydrating the document. We also hydrate `form` so the viewer
+  // header subtitle is correct, and mark it as the currently-saved row.
   openRoadmap: async (id) => {
     const { token, loadRoadmap } = get();
     if (!token) return;
@@ -286,7 +364,11 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
       if (!res.ok) throw new Error(`Open failed (${res.status})`);
       const saved = await res.json();
 
-      loadRoadmap(saved.data as Roadmap);
+      // The title column is authoritative; overlay it onto the loaded document.
+      loadRoadmap({
+        ...(saved.data as Roadmap),
+        title: saved.title ?? (saved.data as Roadmap).title,
+      });
       set({
         form: {
           topic: saved.topic ?? "",
@@ -297,6 +379,7 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
         },
         savedRoadmapId: saved.id,
         saveStatus: "idle",
+        isDirty: false,
         view: "viewer",
       });
     } catch (err) {
@@ -323,9 +406,40 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
     }
   },
 
+  // Rename a saved roadmap by id (from a My Roadmaps card). Persists via partial
+  // PATCH, refreshes the list so the card updates, and keeps the live viewer
+  // title in sync if that same roadmap happens to be open.
+  renameRoadmapById: async (id, title) => {
+    const { token, loadMyRoadmaps, roadmap, savedRoadmapId } = get();
+    if (!token) return;
+
+    const trimmed = title.trim();
+    if (!trimmed) return;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/roadmaps/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ title: trimmed }),
+      });
+      if (!res.ok) throw new Error(`Rename failed (${res.status})`);
+
+      if (roadmap && savedRoadmapId === id) {
+        set({ roadmap: { ...roadmap, title: trimmed } });
+      }
+      await loadMyRoadmaps();
+    } catch (err) {
+      console.error("[renameRoadmapById]", err);
+    }
+  },
+
   // Dagre runs exactly once here. Subsequent edits never trigger relayout.
+  // A fresh load (generate or open) starts clean — no unsaved edits.
   loadRoadmap: (roadmap) =>
-    set({ roadmap, positions: computeDagreLayout(roadmap) }),
+    set({ roadmap, positions: computeDagreLayout(roadmap), isDirty: false }),
 
   selectNode: (id) => set({ selectedNodeId: id }),
 
@@ -402,6 +516,7 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
               ...node,
               status: nextStatus(node.status),
             })),
+            isDirty: true,
           }
         : state,
     ),
@@ -414,6 +529,7 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
               ...node,
               ...patch,
             })),
+            isDirty: true,
           }
         : state,
     ),
@@ -426,6 +542,7 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
               ...node,
               resources: [...node.resources, resource],
             })),
+            isDirty: true,
           }
         : state,
     ),
@@ -438,6 +555,7 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
               ...node,
               resources: node.resources.filter((_, i) => i !== index),
             })),
+            isDirty: true,
           }
         : state,
     ),
@@ -494,6 +612,7 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
         },
         positions,
         branchingNodeId: null,
+        isDirty: true,
       };
     }),
 
@@ -517,6 +636,7 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
         selectedNodeId: state.selectedNodeId === id ? null : state.selectedNodeId,
         branchingNodeId:
           state.branchingNodeId === id ? null : state.branchingNodeId,
+        isDirty: true,
       };
     }),
 }));
