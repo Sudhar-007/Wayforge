@@ -4,3 +4,7 @@ python-dotenv
 httpx
 google-generativeai
 beautifulsoup4
+sqlalchemy[asyncio]>=2.0
+asyncpg
+alembic
+psycopg2-binary

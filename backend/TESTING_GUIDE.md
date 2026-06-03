@@ -1,62 +1,56 @@
-# PathFinder Pipeline Testing Guide
+# Pathfinder Pipeline Testing Guide
+
+How to manually exercise the AI roadmap pipeline end to end.
 
 ## Quick Start
 
-### 1. Check Environment
+### 1. Check your environment
+
 ```bash
 python check_env.py
 ```
 
-This will verify:
-- ✅ SERPER_API_KEY is set
-- ✅ Ollama is running with llama3.1:8b model
+This verifies:
+- ✅ `GEMINI_API_KEY` is set
+- ✅ `SERPER_API_KEY` is set
 - ✅ Backend is running on port 8000
 
-### 2. Set SERPER_API_KEY
+### 2. Set your API keys
 
-**Windows (Command Prompt):**
-```cmd
-set SERPER_API_KEY=your-key-here
+Copy `backend/.env.example` to `backend/.env` and fill in your keys:
+
+```
+GEMINI_API_KEY=your-gemini-key-here
+SERPER_API_KEY=your-serper-key-here
 ```
 
-**Windows (PowerShell):**
-```powershell
-$env:SERPER_API_KEY="your-key-here"
-```
+> Without both keys the backend runs in **mock mode** and returns a sample
+> roadmap instead of calling the live pipeline. The test below still works in
+> mock mode — it just won't hit Gemini/Serper.
 
-**Linux/Mac:**
+### 3. Start the backend
+
 ```bash
-export SERPER_API_KEY='your-key-here'
-```
-
-### 3. Start Ollama (if not running)
-```bash
-ollama serve
-```
-
-In another terminal:
-```bash
-ollama pull llama3.1:8b
-```
-
-### 4. Start Backend (if not running)
-```bash
-cd PathFinder/backend
+cd backend
 python main.py
 ```
 
-### 5. Run the Full Pipeline Test
+### 4. Run the pipeline test
+
 ```bash
-python test_full_pipeline.py
+python test_pipeline.py
 ```
+
+This drives a full 5-question interview against `/chat` and prints the final
+roadmap.
 
 ## What to Watch
 
-### In the Test Terminal
-You'll see the 5-question interview flow and the final roadmap.
+### In the test terminal
+You'll see the 5-question interview flow followed by the generated roadmap JSON.
 
-### In the Backend Terminal (where main.py runs)
-Look for these DEBUG outputs:
+### In the backend terminal (where main.py runs)
+Look for the pipeline DEBUG output:
 
 ```
 ============================================================
@@ -72,65 +66,42 @@ Raw projects from Serper: 20
 
 Scraping content...
 Validating URLs...
-Validation: 30 live, 15 dead links removed
 After validation - resources: 18, projects: 12
 
 Ranking results...
 
-=== URLS BEING SENT TO OLLAMA ===
+=== URLS BEING SENT TO GEMINI ===
   - https://www.freecodecamp.org/...
   - https://developer.mozilla.org/...
   - https://www.theodinproject.com/...
 =================================
-
-Resource context being sent:
-AVAILABLE RESOURCES:
-1. freeCodeCamp - Learn to Code
-   URL: https://www.freecodecamp.org/learn
-   About: Learn to code with free online courses...
 ```
 
 ## Troubleshooting
 
-### No DEBUG output in backend terminal
-- Problem: `generate_roadmap()` is not being called
-- Solution: The LLM is generating roadmap during interview instead of triggering INTERVIEW_COMPLETE
-- Check: Look for "INTERVIEW_COMPLETE" in the assistant's 5th response
+### No DEBUG output in the backend terminal
+- Cause: `generate_roadmap()` was not called — the model generated a roadmap
+  during the interview instead of emitting `INTERVIEW_COMPLETE`.
+- Check: the 5th assistant reply should trigger generation (the backend also
+  force-generates after 5 user messages).
 
 ### "Raw resources from Serper: 0"
-- Problem: SERPER_API_KEY not set or invalid
-- Solution: Check environment variable with `echo %SERPER_API_KEY%` (Windows) or `echo $SERPER_API_KEY` (Linux/Mac)
+- Cause: `SERPER_API_KEY` not set or invalid.
+- Check: confirm the key is in `backend/.env`.
 
 ### "After validation - resources: 0"
-- Problem: All URLs failed validation (404/timeout)
-- Possible causes:
-  - Network issues
-  - Serper returned bad URLs
-  - Too strict validation timeout
+- Cause: all URLs failed validation (404/timeout) — network issues, bad Serper
+  results, or too strict a validation timeout.
 
 ### Roadmap has hallucinated URLs
-- Problem: LLM is inventing URLs instead of using provided ones
-- Check: Make sure "URLS BEING SENT TO OLLAMA" shows real URLs
-- Solution: Improve the system prompt or increase number of resources
-
-## Expected Flow
-
-1. ✅ Interview starts (5 questions)
-2. ✅ After question 5, LLM outputs "INTERVIEW_COMPLETE"
-3. ✅ Backend parses interview data
-4. ✅ `generate_roadmap()` is called
-5. ✅ DEBUG output appears in backend terminal
-6. ✅ Serper searches for resources
-7. ✅ URLs are scraped and validated
-8. ✅ Top resources are selected
-9. ✅ Resources are sent to Ollama
-10. ✅ Ollama generates roadmap using ONLY provided URLs
-11. ✅ Roadmap is returned to user
+- Cause: the model invented URLs instead of using the provided ones.
+- Check: "URLS BEING SENT TO GEMINI" shows real URLs; tighten the system prompt
+  or send more resources if needed.
 
 ## Success Criteria
 
-✅ Backend DEBUG output shows all pipeline stages
-✅ Serper returns > 0 resources
-✅ At least 4-8 resources survive validation
-✅ URLs in final roadmap match those from "URLS BEING SENT TO OLLAMA"
-✅ No "None" or hallucinated URLs in roadmap
+- ✅ Backend DEBUG output shows all pipeline stages
+- ✅ Serper returns > 0 resources
+- ✅ At least 4–8 resources survive validation
+- ✅ URLs in the final roadmap match those from "URLS BEING SENT TO GEMINI"
+- ✅ No `None` or hallucinated URLs in the roadmap

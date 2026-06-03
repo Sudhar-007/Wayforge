@@ -10,8 +10,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -46,10 +46,9 @@ credentials.json
 .DS_Store
 Thumbs.db
 
-# Node (frontend)
-frontend/node_modules/
-frontend/dist/
-frontend/.vite/
+# Node
+node_modules/
+.vite/
 
 # Logs
 *.log

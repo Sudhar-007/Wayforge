@@ -1,9 +1,13 @@
-from fastapi import FastAPI, HTTPException
+import uuid
+
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from google.api_core import exceptions as google_api_exceptions
 from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Literal
-import asyncio
 import os
 import json
 import re
@@ -19,6 +23,10 @@ from scraper import scrape_all
 from ranker import filter_results, format_for_prompt
 from validator import validate_all
 from synthesizer import synthesize_roadmap, mock_structured_roadmap
+
+from database import get_db
+from models import User
+from schemas import UserCreate, UserResponse
 
 # Configure Gemini. Default to Gemini 3.1 Flash-Lite; override with GEMINI_MODEL
 # env if needed. Stay on 3.1 (or newer) — do not pin back to 2.0.
@@ -60,6 +68,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("startup")
+async def verify_db_connection():
+    """Verify the database is reachable on startup (log, don't crash)."""
+    from sqlalchemy import text
+
+    from database import engine
+
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        print("Database connection: OK")
+    except Exception as e:
+        print(f"WARNING: Database connection failed: {e}")
 
 SYSTEM_PROMPT_TEMPLATE = """You are Pathfinder. Generate a personalized learning roadmap as structured JSON.
 
@@ -595,6 +618,44 @@ async def generate(request: GenerateRequest):
 
     print("Synthesizing roadmap (nodes/edges schema)...")
     return synthesize_roadmap(resource_context, request, generate_gemini_text)
+
+
+# ---------------------------------------------------------------------------
+# Users
+#
+# Foundation for OAuth + roadmap persistence in later sessions. The POST/list
+# endpoints exist for testing now and will be gated behind auth later.
+# ---------------------------------------------------------------------------
+
+
+@app.post("/users", response_model=UserResponse, status_code=201)
+async def create_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
+    db_user = User(**user.model_dump())
+    db.add(db_user)
+    try:
+        await db.commit()
+    except IntegrityError as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail=f"User with github_id '{user.github_id}' already exists.",
+        ) from e
+    await db.refresh(db_user)
+    return db_user
+
+
+@app.get("/users/{user_id}", response_model=UserResponse)
+async def get_user(user_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    db_user = await db.get(User, user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return db_user
+
+
+@app.get("/users", response_model=List[UserResponse])
+async def list_users(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User))
+    return result.scalars().all()
 
 
 @app.get("/health")
