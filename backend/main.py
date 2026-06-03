@@ -3,7 +3,7 @@ import secrets
 import time
 import uuid
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from google.api_core import exceptions as google_api_exceptions
@@ -29,13 +29,21 @@ from synthesizer import synthesize_roadmap, mock_structured_roadmap
 
 from auth import create_access_token, get_current_user
 from database import get_db
-from models import User
+from models import Roadmap, User
 from oauth import (
     exchange_code_for_token,
     fetch_github_user,
     github_authorize_url,
 )
-from schemas import UserCreate, UserResponse
+from schemas import (
+    RoadmapCreate,
+    RoadmapListItem,
+    RoadmapResponse,
+    RoadmapUpdate,
+    UserCreate,
+    UserResponse,
+    compute_progress_percentage,
+)
 
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
 
@@ -755,6 +763,103 @@ async def list_users(
 ):
     result = await db.execute(select(User))
     return result.scalars().all()
+
+
+# ---------------------------------------------------------------------------
+# Roadmaps
+#
+# User-scoped persistence for generated roadmaps. Every endpoint requires
+# authentication and enforces ownership — a user can only touch their own rows.
+# ---------------------------------------------------------------------------
+
+
+async def _get_owned_roadmap(
+    roadmap_id: uuid.UUID,
+    db: AsyncSession,
+    current_user: User,
+) -> Roadmap:
+    """Fetch a roadmap, enforcing existence (404) and ownership (403)."""
+    roadmap = await db.get(Roadmap, roadmap_id)
+    if roadmap is None:
+        raise HTTPException(status_code=404, detail="Roadmap not found")
+    if roadmap.user_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to access this roadmap"
+        )
+    return roadmap
+
+
+@app.post("/roadmaps", response_model=RoadmapResponse, status_code=201)
+async def create_roadmap(
+    roadmap: RoadmapCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    db_roadmap = Roadmap(**roadmap.model_dump(), user_id=current_user.id)
+    db.add(db_roadmap)
+    await db.commit()
+    await db.refresh(db_roadmap)
+    return db_roadmap
+
+
+@app.get("/roadmaps", response_model=List[RoadmapListItem])
+async def list_roadmaps(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(
+        select(Roadmap)
+        .where(Roadmap.user_id == current_user.id)
+        .order_by(Roadmap.updated_at.desc())
+    )
+    return [
+        RoadmapListItem(
+            id=rm.id,
+            title=rm.title,
+            topic=rm.topic,
+            level=rm.level,
+            created_at=rm.created_at,
+            updated_at=rm.updated_at,
+            progress_percentage=compute_progress_percentage(rm.data),
+        )
+        for rm in result.scalars().all()
+    ]
+
+
+@app.get("/roadmaps/{roadmap_id}", response_model=RoadmapResponse)
+async def get_roadmap(
+    roadmap_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await _get_owned_roadmap(roadmap_id, db, current_user)
+
+
+@app.patch("/roadmaps/{roadmap_id}", response_model=RoadmapResponse)
+async def update_roadmap(
+    roadmap_id: uuid.UUID,
+    updates: RoadmapUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    roadmap = await _get_owned_roadmap(roadmap_id, db, current_user)
+    for field, value in updates.model_dump(exclude_unset=True).items():
+        setattr(roadmap, field, value)
+    await db.commit()
+    await db.refresh(roadmap)
+    return roadmap
+
+
+@app.delete("/roadmaps/{roadmap_id}", status_code=204)
+async def delete_roadmap(
+    roadmap_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    roadmap = await _get_owned_roadmap(roadmap_id, db, current_user)
+    await db.delete(roadmap)
+    await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @app.get("/health")

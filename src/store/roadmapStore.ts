@@ -101,6 +101,11 @@ interface RoadmapStore {
   loadCurrentUser: () => Promise<void>;
   initiateGitHubLogin: () => Promise<void>;
 
+  // Saving the current roadmap to the user's account.
+  savedRoadmapId: string | null;
+  saveStatus: "idle" | "saving" | "saved" | "error";
+  saveRoadmapToAccount: () => Promise<void>;
+
   loadRoadmap: (roadmap: Roadmap) => void;
   selectNode: (id: string | null) => void;
 
@@ -147,6 +152,9 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
       ? localStorage.getItem(TOKEN_STORAGE_KEY)
       : null,
 
+  savedRoadmapId: null,
+  saveStatus: "idle",
+
   setAuth: (user, token) => {
     localStorage.setItem(TOKEN_STORAGE_KEY, token);
     set({ user, token });
@@ -187,6 +195,43 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
     }
     const { url } = await res.json();
     window.location.href = url;
+  },
+
+  // Persist the current roadmap to the signed-in user's account via POST
+  // /roadmaps. Basic flow only — always creates a new row (no override yet). The
+  // body matches the backend RoadmapCreate schema; `data` is the full live
+  // roadmap so saved progress reflects any inline edits.
+  saveRoadmapToAccount: async () => {
+    const { roadmap, form, token } = get();
+    if (!token || !roadmap) return;
+
+    set({ saveStatus: "saving" });
+    try {
+      const res = await fetch(`${API_BASE_URL}/roadmaps`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: roadmap.title || `${form.topic} Roadmap`,
+          topic: form.topic,
+          level: form.level,
+          weekly: form.weekly,
+          goal: form.goal,
+          focus: form.focus,
+          data: roadmap,
+        }),
+      });
+
+      if (!res.ok) throw new Error(`Save failed (${res.status})`);
+
+      const saved = await res.json();
+      set({ savedRoadmapId: saved.id, saveStatus: "saved" });
+    } catch (err) {
+      console.error("[saveRoadmapToAccount]", err);
+      set({ saveStatus: "error" });
+    }
   },
 
   // Dagre runs exactly once here. Subsequent edits never trigger relayout.
@@ -234,7 +279,8 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
 
       if (Array.isArray(data?.nodes) && Array.isArray(data?.edges)) {
         loadRoadmap(data as Roadmap);
-        set({ view: "viewer" });
+        // Fresh roadmap — it hasn't been saved yet, so reset the save state.
+        set({ view: "viewer", savedRoadmapId: null, saveStatus: "idle" });
       } else {
         console.error(
           "[generateRoadmap] schema mismatch — expected a Roadmap with " +
