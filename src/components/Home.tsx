@@ -3,9 +3,17 @@ import { useRoadmapStore } from "../store/roadmapStore";
 /** Landing screen. Adapted from lovable-screens.tsx; wired to the store. */
 export function Home() {
   const setView = useRoadmapStore((s) => s.setView);
+  const user = useRoadmapStore((s) => s.user);
+
+  // Logged-out visitors are routed through login first; logged-in users go
+  // straight to the intake form.
+  const startCta = user
+    ? { label: "Create your roadmap", to: "intake" as const }
+    : { label: "Login to create your roadmap", to: "login" as const };
 
   return (
     <div className="flex min-h-screen flex-col">
+      <AuthHeader />
       <main className="flex flex-1 flex-col items-center justify-center px-6 py-24">
         <div className="mx-auto max-w-2xl text-center">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
@@ -26,10 +34,10 @@ export function Home() {
           </p>
           <div className="mt-10">
             <button
-              onClick={() => setView("intake")}
+              onClick={() => setView(startCta.to)}
               className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-6 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
             >
-              Create your roadmap
+              {startCta.label}
               <span aria-hidden className="ml-2">
                 →
               </span>
@@ -57,6 +65,48 @@ export function Home() {
       </main>
       <Footer />
     </div>
+  );
+}
+
+/** Top-right auth controls: signed-in identity + sign out, or a sign-in link. */
+function AuthHeader() {
+  const user = useRoadmapStore((s) => s.user);
+  const clearAuth = useRoadmapStore((s) => s.clearAuth);
+  const setView = useRoadmapStore((s) => s.setView);
+
+  return (
+    <header className="flex items-center justify-end px-6 py-4">
+      {user ? (
+        <div className="flex items-center gap-3">
+          {user.avatar_url && (
+            <img
+              src={user.avatar_url}
+              alt=""
+              className="h-8 w-8 rounded-full border border-slate-200"
+            />
+          )}
+          <span className="text-sm font-medium text-slate-700">
+            {user.github_username}
+          </span>
+          <button
+            onClick={() => {
+              clearAuth();
+              setView("home");
+            }}
+            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+          >
+            Sign out
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => setView("login")}
+          className="rounded-lg px-3 py-1.5 text-sm font-medium text-indigo-600 transition hover:text-indigo-700"
+        >
+          Sign in
+        </button>
+      )}
+    </header>
   );
 }
 

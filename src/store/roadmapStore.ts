@@ -45,7 +45,20 @@ export interface BranchInput {
 }
 
 /** Which top-level screen is showing. */
-export type AppView = "home" | "intake" | "loading" | "viewer";
+export type AppView = "home" | "login" | "intake" | "loading" | "viewer";
+
+/** Authenticated user, mirroring the backend's UserResponse schema. */
+export interface User {
+  id: string;
+  github_id: string;
+  github_username: string;
+  email: string | null;
+  avatar_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+const TOKEN_STORAGE_KEY = "pathfinder_token";
 
 /** The intake form — its shape matches the backend's GenerateRequest exactly. */
 export interface RoadmapForm {
@@ -79,6 +92,14 @@ interface RoadmapStore {
   view: AppView;
   form: RoadmapForm;
   generationError: string | null;
+
+  // Authentication.
+  user: User | null;
+  token: string | null;
+  setAuth: (user: User, token: string) => void;
+  clearAuth: () => void;
+  loadCurrentUser: () => Promise<void>;
+  initiateGitHubLogin: () => Promise<void>;
 
   loadRoadmap: (roadmap: Roadmap) => void;
   selectNode: (id: string | null) => void;
@@ -120,6 +141,54 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
   form: INITIAL_FORM,
   generationError: null,
 
+  user: null,
+  token:
+    typeof localStorage !== "undefined"
+      ? localStorage.getItem(TOKEN_STORAGE_KEY)
+      : null,
+
+  setAuth: (user, token) => {
+    localStorage.setItem(TOKEN_STORAGE_KEY, token);
+    set({ user, token });
+  },
+
+  clearAuth: () => {
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    set({ user: null, token: null });
+  },
+
+  // Restore the logged-in user from a persisted token. Clears auth on 401 so a
+  // stale/expired token doesn't leave the UI in a half-logged-in state.
+  loadCurrentUser: async () => {
+    const { token, clearAuth } = get();
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.status === 401) {
+        clearAuth();
+        return;
+      }
+      if (!res.ok) return;
+      set({ user: (await res.json()) as User });
+    } catch {
+      // Network error — keep the token; loadCurrentUser will retry next mount.
+    }
+  },
+
+  // Kick off the OAuth flow: ask the backend for the GitHub authorize URL, then
+  // hand the browser off to GitHub.
+  initiateGitHubLogin: async () => {
+    const res = await fetch(`${API_BASE_URL}/auth/github`);
+    if (!res.ok) {
+      set({ generationError: "Could not start GitHub login. Is the backend running?" });
+      return;
+    }
+    const { url } = await res.json();
+    window.location.href = url;
+  },
+
   // Dagre runs exactly once here. Subsequent edits never trigger relayout.
   loadRoadmap: (roadmap) =>
     set({ roadmap, positions: computeDagreLayout(roadmap) }),
@@ -134,12 +203,19 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
   // loading → intake (error). Never silently transforms the response.
   generateRoadmap: async () => {
     set({ view: "loading", generationError: null });
-    const { form, loadRoadmap } = get();
+    const { form, token, loadRoadmap } = get();
 
     try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      // /generate is open to anonymous users; send the token when we have one so
+      // future user-scoped persistence can attribute the roadmap.
+      if (token) headers.Authorization = `Bearer ${token}`;
+
       const res = await fetch(`${API_BASE_URL}/generate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(form),
       });
 

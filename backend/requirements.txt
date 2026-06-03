@@ -8,3 +8,4 @@ sqlalchemy[asyncio]>=2.0
 asyncpg
 alembic
 psycopg2-binary
+python-jose[cryptography]

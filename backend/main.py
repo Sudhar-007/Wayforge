@@ -1,14 +1,17 @@
+import os
+import secrets
+import time
 import uuid
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from google.api_core import exceptions as google_api_exceptions
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Literal
-import os
 import json
 import re
 from dotenv import load_dotenv
@@ -24,9 +27,17 @@ from ranker import filter_results, format_for_prompt
 from validator import validate_all
 from synthesizer import synthesize_roadmap, mock_structured_roadmap
 
+from auth import create_access_token, get_current_user
 from database import get_db
 from models import User
+from oauth import (
+    exchange_code_for_token,
+    fetch_github_user,
+    github_authorize_url,
+)
 from schemas import UserCreate, UserResponse
+
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
 
 # Configure Gemini. Default to Gemini 3.1 Flash-Lite; override with GEMINI_MODEL
 # env if needed. Stay on 3.1 (or newer) — do not pin back to 2.0.
@@ -621,15 +632,96 @@ async def generate(request: GenerateRequest):
 
 
 # ---------------------------------------------------------------------------
+# Authentication (GitHub OAuth + JWT sessions)
+# ---------------------------------------------------------------------------
+
+# CSRF state tokens, mapped to creation time. In-memory is fine for dev; a
+# multi-process or production deploy would use Redis or signed cookies instead.
+_oauth_states: dict[str, float] = {}
+_STATE_TTL_SECONDS = 600  # 10 minutes
+
+
+def _remember_state(state: str) -> None:
+    now = time.time()
+    # Opportunistically drop expired states so the dict doesn't grow unbounded.
+    for key, created in list(_oauth_states.items()):
+        if now - created > _STATE_TTL_SECONDS:
+            del _oauth_states[key]
+    _oauth_states[state] = now
+
+
+def _consume_state(state: str) -> bool:
+    """Return True if `state` is known and unexpired, removing it either way."""
+    created = _oauth_states.pop(state, None)
+    return created is not None and (time.time() - created) <= _STATE_TTL_SECONDS
+
+
+@app.get("/auth/github")
+async def auth_github():
+    """Return the GitHub authorize URL for the frontend to redirect to."""
+    state = secrets.token_urlsafe(32)
+    _remember_state(state)
+    return {"url": github_authorize_url(state)}
+
+
+@app.get("/auth/github/callback")
+async def auth_github_callback(
+    code: str,
+    state: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Complete the OAuth flow: upsert the user, issue a JWT, redirect to frontend."""
+    if not _consume_state(state):
+        raise HTTPException(status_code=400, detail="Invalid or expired OAuth state.")
+
+    access_token = await exchange_code_for_token(code)
+    profile = await fetch_github_user(access_token)
+
+    github_id = str(profile["id"])
+    result = await db.execute(select(User).where(User.github_id == github_id))
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        user = User(
+            github_id=github_id,
+            github_username=profile.get("login", ""),
+            email=profile.get("email"),
+            avatar_url=profile.get("avatar_url"),
+        )
+        db.add(user)
+    else:
+        # Keep the profile fresh on each login.
+        user.github_username = profile.get("login", user.github_username)
+        user.email = profile.get("email", user.email)
+        user.avatar_url = profile.get("avatar_url", user.avatar_url)
+
+    await db.commit()
+    await db.refresh(user)
+
+    token = create_access_token(user.id)
+    return RedirectResponse(url=f"{FRONTEND_URL}/auth/callback?token={token}")
+
+
+@app.get("/auth/me", response_model=UserResponse)
+async def auth_me(current_user: User = Depends(get_current_user)):
+    """Return the currently authenticated user."""
+    return current_user
+
+
+# ---------------------------------------------------------------------------
 # Users
 #
-# Foundation for OAuth + roadmap persistence in later sessions. The POST/list
-# endpoints exist for testing now and will be gated behind auth later.
+# Dev/test endpoints, now gated behind authentication. Roadmap persistence in a
+# later session will add the real user-scoped endpoints.
 # ---------------------------------------------------------------------------
 
 
 @app.post("/users", response_model=UserResponse, status_code=201)
-async def create_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
+async def create_user(
+    user: UserCreate,
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+):
     db_user = User(**user.model_dump())
     db.add(db_user)
     try:
@@ -645,7 +737,11 @@ async def create_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
 
 
 @app.get("/users/{user_id}", response_model=UserResponse)
-async def get_user(user_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+async def get_user(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+):
     db_user = await db.get(User, user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -653,7 +749,10 @@ async def get_user(user_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
 
 
 @app.get("/users", response_model=List[UserResponse])
-async def list_users(db: AsyncSession = Depends(get_db)):
+async def list_users(
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+):
     result = await db.execute(select(User))
     return result.scalars().all()
 
