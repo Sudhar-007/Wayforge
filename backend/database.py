@@ -23,7 +23,20 @@ DATABASE_URL = os.environ.get(
 # default sync driver (psycopg2).
 SQLALCHEMY_DATABASE_URL_SYNC = DATABASE_URL.replace("+asyncpg", "")
 
-engine = create_async_engine(DATABASE_URL, echo=False, future=True)
+# Azure Postgres Flexible Server forces TLS. We enable it per-driver (asyncpg
+# here, psycopg2 in alembic/env.py) instead of putting an SSL flag in
+# DATABASE_URL, because the two drivers spell the option differently
+# (ssl=True vs sslmode=require). Gated on DB_SSL so the local docker-compose
+# Postgres (TLS disabled) keeps working unchanged.
+DB_SSL_REQUIRED = os.environ.get("DB_SSL", "").lower() in ("require", "true", "1")
+_connect_args = {"ssl": True} if DB_SSL_REQUIRED else {}
+
+engine = create_async_engine(
+    DATABASE_URL,
+    echo=False,
+    future=True,
+    connect_args=_connect_args,
+)
 
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,

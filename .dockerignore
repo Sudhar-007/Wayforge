@@ -1,0 +1,27 @@
+# Frontend / Node (not part of the backend image)
+node_modules
+dist
+src
+index.html
+package.json
+package-lock.json
+postcss.config.js
+tailwind.config.js
+tsconfig.json
+vite.config.ts
+
+# Git / editors
+.git
+.gitignore
+.vscode
+.idea
+
+# Python caches
+**/__pycache__
+*.pyc
+
+# Secrets & local env
+**/.env
+
+# Docs
+*.md

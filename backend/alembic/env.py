@@ -11,7 +11,7 @@ from sqlalchemy import engine_from_config, pool
 from alembic import context
 
 # Import the declarative Base and models so target_metadata is populated.
-from database import SQLALCHEMY_DATABASE_URL_SYNC, Base
+from database import SQLALCHEMY_DATABASE_URL_SYNC, Base, DB_SSL_REQUIRED
 import models  # noqa: F401  (imported for side effect: registers tables on Base)
 
 config = context.config
@@ -41,10 +41,15 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode (with a live DBAPI connection)."""
+    # Match database.py: require TLS (psycopg2 spelling) only when DB_SSL is
+    # set, so Azure Postgres works while local docker Postgres stays plaintext.
+    connect_args = {"sslmode": "require"} if DB_SSL_REQUIRED else {}
+
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args=connect_args,
     )
 
     with connectable.connect() as connection:
