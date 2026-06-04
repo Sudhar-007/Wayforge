@@ -450,28 +450,63 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
   // result into the existing viewer. Drives loading → viewer (success) or
   // loading → intake (error). Never silently transforms the response.
   generateRoadmap: async () => {
+    const { form, token, loadRoadmap, clearAuth } = get();
+
+    // Generation is authenticated-only (the backend enforces this with a 401).
+    // Guard up front so logged-out users are routed to login rather than seeing
+    // a failed request.
+    if (!token) {
+      set({
+        generationError: "Please sign in with GitHub to generate a roadmap.",
+        view: "login",
+      });
+      return;
+    }
+
     set({ view: "loading", generationError: null });
-    const { form, token, loadRoadmap } = get();
 
     try {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      // /generate is open to anonymous users; send the token when we have one so
-      // future user-scoped persistence can attribute the roadmap.
-      if (token) headers.Authorization = `Bearer ${token}`;
-
       const res = await fetch(`${API_BASE_URL}/generate`, {
         method: "POST",
-        headers,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(form),
       });
+
+      // Token missing/expired/invalid — drop the stale session and re-login.
+      if (res.status === 401) {
+        clearAuth();
+        set({
+          generationError: "Your session expired — please sign in again.",
+          view: "login",
+        });
+        return;
+      }
+
+      // Rate limited — surface the backend's message + retry timing gracefully.
+      if (res.status === 429) {
+        const body = await res.json().catch(() => null);
+        const detail = body?.detail ?? {};
+        const mins = detail.retry_after_seconds
+          ? Math.ceil(detail.retry_after_seconds / 60)
+          : null;
+        const when = mins ? ` Try again in about ${mins} min.` : "";
+        set({
+          generationError:
+            (detail.message ?? "You've hit the generation rate limit.") + when,
+          view: "intake",
+        });
+        return;
+      }
 
       if (!res.ok) {
         let detail = `Server error ${res.status}`;
         try {
           const body = await res.json();
-          if (body?.detail) detail = body.detail;
+          // Only use string details; structured details are handled above.
+          if (typeof body?.detail === "string") detail = body.detail;
         } catch {
           // non-JSON error body; keep the status message
         }
