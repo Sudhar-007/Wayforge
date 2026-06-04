@@ -34,6 +34,7 @@ env/
 *.key
 secrets.json
 credentials.json
+containerapp.deploy.yaml
 
 # IDE
 .vscode/
