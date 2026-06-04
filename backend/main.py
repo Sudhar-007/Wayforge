@@ -27,6 +27,7 @@ from synthesizer import synthesize_roadmap, mock_structured_roadmap
 from auth import create_access_token, get_current_user
 from database import get_db
 from models import Roadmap, User
+from ratelimit import enforce_generate_limit
 from oauth import (
     exchange_code_for_token,
     fetch_github_user,
@@ -109,14 +110,26 @@ class GenerateRequest(BaseModel):
 
 
 @app.post("/generate")
-async def generate(request: GenerateRequest):
-    """Structured roadmap generation.
+async def generate(
+    request: GenerateRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Structured roadmap generation (authenticated users only).
 
     Accepts the intake form directly and returns a roadmap matching the frontend
     contract (src/types/roadmap.ts): top-level nodes[]/edges[]. Runs the
     search/scrape/validate/rank pipeline, then the new-schema synthesizer.
+
+    Requires a valid JWT — `get_current_user` raises 401 for anonymous/expired
+    callers, so they never reach Gemini/Serper. Then enforces per-user + global
+    rate limits (raises 429) before any generation work.
     """
     print("Structured roadmap generation (/generate) started...")
+
+    # Per-user + global daily/hourly caps (Postgres-backed; survives the
+    # scale-to-zero cold starts that would reset in-memory counters).
+    await enforce_generate_limit(db, user.id)
 
     # Mock mode: no API keys configured — return a schema-valid sample roadmap.
     if not os.environ.get("GEMINI_API_KEY") or not os.environ.get("SERPER_API_KEY"):

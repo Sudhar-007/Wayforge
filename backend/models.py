@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy import DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -71,3 +71,30 @@ class Roadmap(Base):
     )
 
     user: Mapped["User"] = relationship(back_populates="roadmaps")
+
+
+class RateLimitCounter(Base):
+    """Fixed-window rate-limit counter for /generate.
+
+    One row per (scope, subject_key, period, window_start). Lives in Postgres so
+    counts survive Container Apps scale-to-zero cold starts (in-memory would
+    reset). `scope` is 'user' or 'global'; `period` is 'hour' or 'day';
+    `window_start` is the UTC-truncated start of the window.
+    """
+
+    __tablename__ = "rate_limit_counters"
+
+    scope: Mapped[str] = mapped_column(String, primary_key=True)
+    subject_key: Mapped[str] = mapped_column(String, primary_key=True)
+    period: Mapped[str] = mapped_column(String, primary_key=True)
+    window_start: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        primary_key=True,
+        index=True,
+    )
+    count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
