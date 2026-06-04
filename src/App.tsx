@@ -1,8 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useRoadmapStore } from "./store/roadmapStore";
-import { useDebouncedCallback } from "./lib/useDebouncedCallback";
-import { saveRoadmap } from "./lib/api";
 import { RoadmapCanvas } from "./components/RoadmapCanvas";
 import { DetailPanel } from "./components/DetailPanel";
 import { Home } from "./components/Home";
@@ -13,11 +11,9 @@ import { ViewerHeader } from "./components/ViewerHeader";
 import { Profile } from "./components/Profile";
 import { MyRoadmaps } from "./components/MyRoadmaps";
 import { AppMenu } from "./components/AppMenu";
-import type { Roadmap } from "./types/roadmap";
 
 export default function App() {
   const view = useRoadmapStore((s) => s.view);
-  const roadmap = useRoadmapStore((s) => s.roadmap);
 
   // Authentication bootstrap, runs once on mount:
   //  - If we landed on the OAuth callback (/auth/callback?token=...), capture the
@@ -55,22 +51,6 @@ export default function App() {
 
     void loadCurrentUser();
   }, []);
-
-  // Debounced autosave (200ms). Wired to the saveRoadmap() stub today; becomes
-  // a backend call later. Skips the first roadmap load so we only persist edits.
-  const debouncedSave = useDebouncedCallback((r: Roadmap) => {
-    void saveRoadmap(r);
-  }, 200);
-  const isInitialLoad = useRef(true);
-
-  useEffect(() => {
-    if (!roadmap) return;
-    if (isInitialLoad.current) {
-      isInitialLoad.current = false;
-      return;
-    }
-    debouncedSave(roadmap);
-  }, [roadmap, debouncedSave]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 antialiased">

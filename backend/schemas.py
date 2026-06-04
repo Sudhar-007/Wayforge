@@ -13,10 +13,6 @@ class UserBase(BaseModel):
     avatar_url: str | None = None
 
 
-class UserCreate(UserBase):
-    """Input shape for creating a user."""
-
-
 class UserResponse(UserBase):
     """Output shape returned to clients."""
 

@@ -38,7 +38,7 @@ resource search, PostgreSQL (async SQLAlchemy + Alembic) for persistence.
 │   ├── data/             # Mock roadmap data
 │   └── types/            # roadmap.ts — the shared data contract
 ├── backend/              # FastAPI app + AI pipeline
-│   ├── main.py           # API entrypoint (/generate, /chat, /auth, /roadmaps, /users, /health)
+│   ├── main.py           # API entrypoint (/generate, /auth, /roadmaps, /health)
 │   ├── auth.py           # JWT sessions + current-user dependency
 │   ├── oauth.py          # GitHub OAuth flow
 │   ├── intent_mapper.py  # ── AI pipeline ──
@@ -125,7 +125,7 @@ With the backend running:
 ```bash
 cd backend
 python check_env.py       # verify keys + backend are up
-python test_pipeline.py   # drive a full interview and print the roadmap
+# then POST to /generate (see backend/TESTING_GUIDE.md for a curl example)
 ```
 
 See `backend/TESTING_GUIDE.md` for details.

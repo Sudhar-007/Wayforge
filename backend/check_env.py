@@ -61,7 +61,7 @@ async def check_environment():
     print("\n" + "="*60)
     if all_good:
         print("[OK] ALL CHECKS PASSED - Ready to test!")
-        print("\nRun: python test_pipeline.py")
+        print("\nStart the backend with: python main.py")
     else:
         print("[FAIL] SOME CHECKS FAILED - Fix the issues above")
         if not gemini_key or not serper_key:

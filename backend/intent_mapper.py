@@ -14,9 +14,9 @@ def build_search_strategy(goal: str, skill_input: str, interest: str, hours_per_
     # Determine track
     track = interest.lower() if interest else "general programming"
 
-    # Determine skill level. Accepts both the legacy /chat vocabulary
-    # ("never coded"/"basics"/"experienced") and the structured /generate
-    # levels ("Beginner"/"Intermediate"/"Advanced").
+    # Determine skill level. Accepts the structured /generate levels
+    # ("Beginner"/"Intermediate"/"Advanced") plus assorted free-text synonyms
+    # ("never coded"/"basics"/"experienced") for robustness.
     skill_map = {
         "never coded": "beginner",
         "basics": "beginner",
