@@ -27,7 +27,7 @@ from synthesizer import synthesize_roadmap, mock_structured_roadmap
 from auth import create_access_token, get_current_user
 from database import get_db
 from models import Roadmap, User
-from ratelimit import enforce_generate_limit
+from ratelimit import enforce_generate_limit, get_limit_status
 from oauth import (
     exchange_code_for_token,
     fetch_github_user,
@@ -112,6 +112,7 @@ class GenerateRequest(BaseModel):
 @app.post("/generate")
 async def generate(
     request: GenerateRequest,
+    response: Response,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -128,8 +129,11 @@ async def generate(
     print("Structured roadmap generation (/generate) started...")
 
     # Per-user + global daily/hourly caps (Postgres-backed; survives the
-    # scale-to-zero cold starts that would reset in-memory counters).
-    await enforce_generate_limit(db, user.id)
+    # scale-to-zero cold starts that would reset in-memory counters). Returns the
+    # post-increment status so we can surface "generations left" without a 2nd query.
+    limit_status = await enforce_generate_limit(db, user.id)
+    response.headers["X-RateLimit-Remaining-Hour"] = str(limit_status["hour"]["remaining"])
+    response.headers["X-RateLimit-Remaining-Day"] = str(limit_status["day"]["remaining"])
 
     # Mock mode: no API keys configured — return a schema-valid sample roadmap.
     if not os.environ.get("GEMINI_API_KEY") or not os.environ.get("SERPER_API_KEY"):
@@ -165,6 +169,19 @@ async def generate(
 
     print("Synthesizing roadmap (nodes/edges schema)...")
     return synthesize_roadmap(resource_context, request, generate_gemini_text)
+
+
+@app.get("/limits")
+async def limits(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Current rate-limit status for the authenticated user (read-only).
+
+    Source of truth for the frontend's "generations left" warning — returns
+    hour / day / global windows with limit, used, remaining, and resets_at.
+    """
+    return await get_limit_status(db, user.id)
 
 
 # ---------------------------------------------------------------------------

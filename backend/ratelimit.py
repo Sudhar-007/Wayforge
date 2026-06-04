@@ -38,6 +38,37 @@ def _day_start(now: datetime) -> datetime:
     return now.replace(hour=0, minute=0, second=0, microsecond=0)
 
 
+def _window_status(limit: int, used: int, window_start: datetime, window: timedelta) -> dict:
+    return {
+        "limit": limit,
+        "used": used,
+        "remaining": max(0, limit - used),
+        "resets_at": (window_start + window).isoformat(),
+    }
+
+
+async def get_limit_status(db: AsyncSession, user_id: uuid.UUID) -> dict:
+    """Read-only current limit status for a user (no increment). Source of truth
+    for the frontend's "generations left" warning."""
+    now = datetime.now(timezone.utc)
+    hour_start = _hour_start(now)
+    day_start = _day_start(now)
+    key = str(user_id)
+
+    try:
+        user_hour = await _get_count(db, "user", key, "hour", hour_start)
+        user_day = await _get_count(db, "user", key, "day", day_start)
+        global_day = await _get_count(db, "global", "global", "day", day_start)
+    except Exception as exc:
+        raise _DB_UNAVAILABLE from exc
+
+    return {
+        "hour": _window_status(USER_PER_HOUR, user_hour, hour_start, timedelta(hours=1)),
+        "day": _window_status(USER_PER_DAY, user_day, day_start, timedelta(days=1)),
+        "global": _window_status(GLOBAL_PER_DAY, global_day, day_start, timedelta(days=1)),
+    }
+
+
 async def _get_count(
     db: AsyncSession, scope: str, subject_key: str, period: str, window_start: datetime
 ) -> int:
@@ -74,6 +105,12 @@ def _raise_429(
 ) -> None:
     retry_at = window_start + window
     retry_after = max(1, int((retry_at - datetime.now(timezone.utc)).total_seconds()))
+    headers = {"Retry-After": str(retry_after)}
+    # Surface the tripped window's remaining (always 0) for clients reading headers.
+    if scope_label == "user_hour":
+        headers["X-RateLimit-Remaining-Hour"] = "0"
+    elif scope_label == "user_day":
+        headers["X-RateLimit-Remaining-Day"] = "0"
     raise HTTPException(
         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
         detail={
@@ -84,12 +121,14 @@ def _raise_429(
             "retry_after_seconds": retry_after,
             "retry_at": retry_at.isoformat(),
         },
-        headers={"Retry-After": str(retry_after)},
+        headers=headers,
     )
 
 
-async def enforce_generate_limit(db: AsyncSession, user_id: uuid.UUID) -> None:
-    """Raise 429 if any limit is exceeded; otherwise increment all counters.
+async def enforce_generate_limit(db: AsyncSession, user_id: uuid.UUID) -> dict:
+    """Raise 429 if any limit is exceeded; otherwise increment all counters and
+    return the post-increment status (so the caller can set response headers
+    without an extra query).
 
     Checks (precedence global -> user/day -> user/hour); rejected requests are
     not counted. Fails closed (503) on DB errors so quota protection is never
@@ -140,3 +179,10 @@ async def enforce_generate_limit(db: AsyncSession, user_id: uuid.UUID) -> None:
     except Exception as exc:
         await db.rollback()
         raise _DB_UNAVAILABLE from exc
+
+    # Post-increment status, computed from the pre-read counts + 1 (no extra query).
+    return {
+        "hour": _window_status(USER_PER_HOUR, user_hour + 1, hour_start, timedelta(hours=1)),
+        "day": _window_status(USER_PER_DAY, user_day + 1, day_start, timedelta(days=1)),
+        "global": _window_status(GLOBAL_PER_DAY, global_day + 1, day_start, timedelta(days=1)),
+    }

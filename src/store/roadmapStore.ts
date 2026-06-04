@@ -38,6 +38,23 @@ type EditableNodeFields = Pick<
   "title" | "description" | "status" | "type"
 >;
 
+/** One rate-limit window as returned by GET /limits. */
+type LimitWindow = {
+  limit: number;
+  used: number;
+  remaining: number;
+  resets_at: string;
+};
+
+/** Rate-limit status from GET /limits — the backend (Postgres counter) is the
+ * source of truth; the "generations left" warning reads this, never a
+ * client-side count. */
+type GenerationLimits = {
+  hour: LimitWindow;
+  day: LimitWindow;
+  global: LimitWindow;
+};
+
 /** Input for creating a branch off an existing node. */
 export interface BranchInput {
   title: string;
@@ -100,6 +117,10 @@ interface RoadmapStore {
   view: AppView;
   form: RoadmapForm;
   generationError: string | null;
+  /** Latest rate-limit status (GET /limits). Drives the "generations left"
+   * warning; null until fetched. */
+  generationLimits: GenerationLimits | null;
+  fetchLimits: () => Promise<void>;
 
   // Authentication.
   user: User | null;
@@ -171,6 +192,7 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
   view: "home",
   form: INITIAL_FORM,
   generationError: null,
+  generationLimits: null,
 
   user: null,
   token:
@@ -519,6 +541,8 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
         loadRoadmap(data as Roadmap);
         // Fresh roadmap — it hasn't been saved yet, so reset the save state.
         set({ view: "viewer", savedRoadmapId: null, saveStatus: "idle" });
+        // This generate consumed one; refresh remaining from the backend.
+        void get().fetchLimits();
       } else {
         console.error(
           "[generateRoadmap] schema mismatch — expected a Roadmap with " +
@@ -537,6 +561,22 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
         generationError: err instanceof Error ? err.message : String(err),
         view: "intake",
       });
+    }
+  },
+
+  // Read current rate-limit status from the backend (source of truth). Non-fatal
+  // on failure — the warning simply won't render.
+  fetchLimits: async () => {
+    const { token } = get();
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/limits`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      set({ generationLimits: (await res.json()) as GenerationLimits });
+    } catch {
+      // ignore — non-blocking warning
     }
   },
 

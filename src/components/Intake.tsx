@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useRoadmapStore } from "../store/roadmapStore";
 
 /** 5-question intake form. Adapted from lovable-screens.tsx; state lives in the
@@ -8,9 +9,32 @@ export function Intake() {
   const setView = useRoadmapStore((s) => s.setView);
   const generateRoadmap = useRoadmapStore((s) => s.generateRoadmap);
   const generationError = useRoadmapStore((s) => s.generationError);
+  const fetchLimits = useRoadmapStore((s) => s.fetchLimits);
+  const generationLimits = useRoadmapStore((s) => s.generationLimits);
+
+  // Pull the remaining-generations count from the backend on mount (source of
+  // truth — never counted client-side). Also warms the scaled-to-zero backend.
+  useEffect(() => {
+    void fetchLimits();
+  }, [fetchLimits]);
 
   const canSubmit =
     form.topic.trim().length > 0 && form.goal.trim().length > 0;
+
+  // Non-blocking heads-up when the user is near a lockout. Hour binds before day.
+  const limitWarning = (() => {
+    if (!generationLimits) return null;
+    const { hour, day } = generationLimits;
+    if (hour.remaining <= 1)
+      return hour.remaining === 0
+        ? "You've used all your roadmap generations this hour."
+        : "1 roadmap generation left this hour.";
+    if (day.remaining <= 1)
+      return day.remaining === 0
+        ? "You've used all your roadmap generations today."
+        : "1 roadmap generation left today.";
+    return null;
+  })();
 
   return (
     <div className="mx-auto flex min-h-screen max-w-2xl flex-col px-6 py-10">
@@ -31,6 +55,15 @@ export function Intake() {
           A few quick questions so we can shape a roadmap that actually fits you.
         </p>
       </header>
+
+      {limitWarning && (
+        <div
+          role="status"
+          className="mt-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+        >
+          {limitWarning}
+        </div>
+      )}
 
       {generationError && (
         <div
