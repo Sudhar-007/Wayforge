@@ -1,5 +1,7 @@
 # Pathfinder
 
+**Live app: [wayforge.page](https://wayforge.page)**
+
 Pathfinder is an AI-generated CS learning roadmap tool. You describe what you
 want to learn, an AI pipeline generates a structured roadmap, and the app
 renders it as an editable directed acyclic graph (DAG) styled similarly to
@@ -18,6 +20,10 @@ progress, and edit topics inline.
   page (with per-roadmap progress), reopen, rename, and delete.
 - **Smart save** — the viewer tracks unsaved edits; saving an already-saved
   roadmap lets you **update in place** or **save as a new copy**.
+- **Rate-limited generation** — `/generate` requires sign-in and enforces
+  per-user limits (5/hour, 15/day) plus a global daily ceiling, with counters
+  persisted in Postgres so they survive cold starts. The intake form shows a
+  heads-up when you're near the limit.
 
 ## Stack
 
@@ -38,7 +44,7 @@ resource search, PostgreSQL (async SQLAlchemy + Alembic) for persistence.
 │   ├── data/             # Mock roadmap data
 │   └── types/            # roadmap.ts — the shared data contract
 ├── backend/              # FastAPI app + AI pipeline
-│   ├── main.py           # API entrypoint (/generate, /auth, /roadmaps, /health)
+│   ├── main.py           # API entrypoint (/generate, /auth, /roadmaps, /limits, /health)
 │   ├── auth.py           # JWT sessions + current-user dependency
 │   ├── oauth.py          # GitHub OAuth flow
 │   ├── intent_mapper.py  # ── AI pipeline ──
@@ -48,7 +54,7 @@ resource search, PostgreSQL (async SQLAlchemy + Alembic) for persistence.
 │   ├── validator.py      #
 │   ├── synthesizer.py    # ─────────────────
 │   ├── database.py       # Async SQLAlchemy engine + session
-│   ├── models.py         # ORM models (User, Roadmap)
+│   ├── models.py         # ORM models (User, Roadmap, RateLimitCounter)
 │   ├── schemas.py        # Pydantic schemas
 │   └── alembic/          # DB migrations
 ├── docker-compose.yml    # PostgreSQL 16
