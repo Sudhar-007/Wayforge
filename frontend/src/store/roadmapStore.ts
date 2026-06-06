@@ -87,9 +87,28 @@ export type AppView =
   | "login"
   | "intake"
   | "loading"
+  | "authCallback"
   | "viewer"
   | "profile"
   | "myRoadmaps";
+
+/**
+ * Initial screen. On a fresh load of the OAuth callback (`/auth/callback?token=`)
+ * we start in `authCallback` so the very first paint is the loading state while
+ * the token exchange runs — otherwise the default Home page would sit silently
+ * during the (possibly cold-start) wait. Gated on the token being present so a
+ * tokenless hit doesn't get stuck on the spinner.
+ */
+function initialView(): AppView {
+  if (
+    typeof window !== "undefined" &&
+    window.location.pathname === "/auth/callback" &&
+    new URLSearchParams(window.location.search).has("token")
+  ) {
+    return "authCallback";
+  }
+  return "home";
+}
 
 /** Authenticated user, mirroring the backend's UserResponse schema. */
 export interface User {
@@ -225,7 +244,7 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
   theme: initialTheme(),
   modal: null,
 
-  view: "home",
+  view: initialView(),
   form: INITIAL_FORM,
   generationError: null,
   generationLimits: null,

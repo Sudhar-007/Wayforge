@@ -12,6 +12,11 @@ import { Profile } from "./components/Profile";
 import { MyRoadmaps } from "./components/MyRoadmaps";
 import { CreateManualModal } from "./components/CreateManualModal";
 
+// Auth-callback loading copy (module-scope so the array reference is stable).
+const AUTH_MESSAGES = ["Signing you in…", "Setting up your account…"];
+const AUTH_SUBTITLE =
+  "Waking up the server — this can take a few seconds on the first visit.";
+
 export default function App() {
   const view = useRoadmapStore((s) => s.view);
   const modal = useRoadmapStore((s) => s.modal);
@@ -61,6 +66,9 @@ export default function App() {
       {view === "login" && <Login />}
       {view === "intake" && <Intake />}
       {view === "loading" && <Loading />}
+      {view === "authCallback" && (
+        <Loading messages={AUTH_MESSAGES} subtitle={AUTH_SUBTITLE} />
+      )}
       {view === "profile" && <Profile />}
       {view === "myRoadmaps" && <MyRoadmaps />}
       {view === "viewer" && (
