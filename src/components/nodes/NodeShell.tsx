@@ -93,7 +93,7 @@ export function NodeShell({
             e.stopPropagation();
             openBranchCreator(node.id);
           }}
-          className="nodrag nopan absolute -bottom-2 -right-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-xs leading-none text-accent-on shadow transition-opacity hover:bg-accent-hover group-hover:opacity-100 md:opacity-0"
+          className="nodrag nopan absolute -bottom-2 -right-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-xs leading-none text-accent-on opacity-0 shadow transition-opacity hover:bg-accent-hover group-hover:opacity-100"
         >
           <Icon.plus width={12} height={12} />
         </button>
