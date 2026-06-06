@@ -21,6 +21,19 @@ JWT_SECRET = os.environ.get("JWT_SECRET", "")
 JWT_ALGORITHM = "HS256"
 DEFAULT_EXPIRES_IN = timedelta(days=7)
 
+# Minimum acceptable secret length. HS256 security rests entirely on this secret;
+# a short/guessable value lets an attacker forge tokens for any user (account
+# takeover). Fail fast at import so a misconfigured deploy never boots with a weak
+# or missing secret instead of silently signing forgeable tokens.
+MIN_JWT_SECRET_LENGTH = 32
+
+if len(JWT_SECRET) < MIN_JWT_SECRET_LENGTH:
+    raise RuntimeError(
+        "JWT_SECRET must be set to a strong random value of at least "
+        f"{MIN_JWT_SECRET_LENGTH} characters "
+        f"(got {len(JWT_SECRET)}). Generate one with: openssl rand -hex 32"
+    )
+
 # tokenUrl is conventional; we never serve a password grant there.
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/github")
 

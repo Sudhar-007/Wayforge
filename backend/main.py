@@ -3,12 +3,12 @@ import secrets
 import time
 import uuid
 
-from fastapi import Depends, FastAPI, HTTPException, Response, status
+from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from google.api_core import exceptions as google_api_exceptions
-from pydantic import BaseModel
-from sqlalchemy import select
+from pydantic import BaseModel, Field
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Literal
 from dotenv import load_dotenv
@@ -78,11 +78,44 @@ def generate_gemini_text(prompt: str) -> str:
 
 app = FastAPI()
 
+# Reject oversized request bodies early (defense for /generate and /roadmaps).
+# Auth is bearer-token, not cookies, so this is the main per-request abuse guard.
+MAX_REQUEST_BYTES = 512 * 1024  # 512 KB
+
+
+@app.middleware("http")
+async def limit_body_size(request: Request, call_next):
+    content_length = request.headers.get("content-length")
+    if content_length is not None:
+        try:
+            if int(content_length) > MAX_REQUEST_BYTES:
+                return JSONResponse(
+                    status_code=413, content={"detail": "Request body too large"}
+                )
+        except ValueError:
+            pass  # malformed header — let downstream handle it
+    return await call_next(request)
+
+
+# CORS allowlist (was "*"). Origins from FRONTEND_URL plus local dev. Browser-only
+# guard — non-browser clients ignore CORS; bearer-token auth is the real control.
+# allow_credentials stays False (no cookie auth), so a strict origin list is safe.
+ALLOWED_ORIGINS = list(
+    dict.fromkeys(
+        [
+            FRONTEND_URL,
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+        ]
+    )
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 
@@ -102,11 +135,13 @@ async def verify_db_connection():
 
 
 class GenerateRequest(BaseModel):
-    topic: str
+    # Length caps bound the Serper queries and the Gemini prompt so a single
+    # request can't amplify cost (rate limits cap frequency, not payload size).
+    topic: str = Field(min_length=1, max_length=200)
     level: Literal["Beginner", "Intermediate", "Advanced"]
-    weekly: str  # "1-3 hours" | "4-7 hours" | "8-15 hours" | "15+ hours"
-    goal: str
-    focus: str = ""
+    weekly: Literal["1-3 hours", "4-7 hours", "8-15 hours", "15+ hours"]
+    goal: str = Field(min_length=1, max_length=300)
+    focus: str = Field(default="", max_length=2000)
 
 
 @app.post("/generate")
@@ -285,12 +320,27 @@ async def _get_owned_roadmap(
     return roadmap
 
 
+# Cap saved roadmaps per user (these routes are authenticated but unmetered).
+MAX_ROADMAPS_PER_USER = 100
+
+
 @app.post("/roadmaps", response_model=RoadmapResponse, status_code=201)
 async def create_roadmap(
     roadmap: RoadmapCreate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    count = await db.scalar(
+        select(func.count())
+        .select_from(Roadmap)
+        .where(Roadmap.user_id == current_user.id)
+    )
+    if count is not None and count >= MAX_ROADMAPS_PER_USER:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Roadmap limit reached ({MAX_ROADMAPS_PER_USER}). Delete some to save more.",
+        )
+
     db_roadmap = Roadmap(**roadmap.model_dump(), user_id=current_user.id)
     db.add(db_roadmap)
     await db.commit()
