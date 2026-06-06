@@ -1,4 +1,5 @@
 # Frontend / Node (not part of the backend image)
+frontend
 node_modules
 dist
 src
