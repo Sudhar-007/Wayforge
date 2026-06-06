@@ -1,6 +1,13 @@
+import { useState } from "react";
 import { useRoadmapStore } from "../store/roadmapStore";
 import { TopBar } from "./Nav";
+import { Loading } from "./Loading";
 import { Icon } from "./icons";
+
+// Stable (module-scope) copy for the connect-loading state.
+const CONNECT_MESSAGES = ["Connecting to GitHub…"];
+const CONNECT_SUBTITLE =
+  "Waking up the server — this can take a few seconds on the first visit.";
 
 /**
  * Login screen. Wired to the real auth flow:
@@ -11,6 +18,22 @@ export function Login() {
   const initiateGitHubLogin = useRoadmapStore((s) => s.initiateGitHubLogin);
   const setView = useRoadmapStore((s) => s.setView);
   const error = useRoadmapStore((s) => s.generationError);
+
+  // `/auth/github` is the first backend call in the flow, so it's what cold-starts
+  // the scaled-to-zero backend. Show a loading screen while it's in flight; on
+  // success the store redirects to GitHub (page unloads), on failure it sets an
+  // error and we drop back to the form. (Auth logic itself is unchanged.)
+  const [connecting, setConnecting] = useState(false);
+
+  const onGitHub = async () => {
+    setConnecting(true);
+    await initiateGitHubLogin();
+    setConnecting(false); // only reached if the redirect didn't happen (failure)
+  };
+
+  if (connecting) {
+    return <Loading messages={CONNECT_MESSAGES} subtitle={CONNECT_SUBTITLE} />;
+  }
 
   return (
     <div className="min-h-screen">
@@ -50,7 +73,7 @@ export function Login() {
               <span className="text-xs">soon</span>
             </button>
             <button
-              onClick={() => void initiateGitHubLogin()}
+              onClick={() => void onGitHub()}
               className="flex h-11 w-full items-center justify-center gap-3 rounded-md bg-text px-4 text-sm font-semibold text-bg transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
               <Icon.github />
