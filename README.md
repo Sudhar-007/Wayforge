@@ -24,6 +24,10 @@ progress, and edit topics inline.
   per-user limits (3/hour, 15/day) plus a global daily ceiling, with counters
   persisted in Postgres so they survive cold starts. The intake form shows a
   heads-up when you're near the limit.
+- **Two ways to start** — generate with AI from a short intake form, or
+  **create manually** on a blank canvas and build the roadmap node by node.
+- **Polished UI** — the Wayforge design-token system with **light & dark**
+  themes, built on Tailwind (no ad-hoc styles).
 
 ## Stack
 
@@ -136,11 +140,42 @@ python check_env.py       # verify keys + backend are up
 
 See `backend/TESTING_GUIDE.md` for details.
 
+## Security
+
+- **Secrets are environment-only.** No keys, tokens, or passwords are committed;
+  `.env` is gitignored and the repo ships only `.env.example` placeholders. The
+  history is scanned with gitleaks + trufflehog.
+- **Auth.** GitHub OAuth with HS256 JWT sessions; the backend refuses to start
+  unless `JWT_SECRET` is set and ≥32 chars, and pins the JWT algorithm on decode.
+- **Authorization.** Every roadmap route is authenticated and ownership-checked
+  (404 on missing, 403 on not-owner) — users can only touch their own data.
+- **Abuse limits.** Per-user + global rate limits on `/generate`; request-body
+  size cap, roadmap payload/count caps, and validated/length-bounded inputs.
+- **CORS** is restricted to the configured frontend origin (+ localhost for dev).
+- **Dependencies** are pinned for reproducible builds.
+
+Found something? Please open a private security advisory rather than a public issue.
+
+## Deployment
+
+The backend is containerized (`Dockerfile`, built from the repo root) and runs on
+**Azure Container Apps**; the frontend is a static Vite build served by **Azure
+Static Web Apps**; persistence is **Azure Database for PostgreSQL**. Postgres TLS
+is enabled per-driver via the `DB_SSL` env var. Prod required env vars are listed
+in `backend/.env.example` plus the frontend's build-time `VITE_API_BASE_URL`.
+Operational specifics live in `the project notes`.
+
 ## Status
 
-Built: AI generation pipeline, DAG rendering and inline editing, GitHub OAuth +
-JWT auth, roadmap persistence, the My Roadmaps list (continue / rename / delete),
-roadmap title rename, and override-vs-save-new logic.
+Built: AI generation pipeline, DAG rendering + inline editing, GitHub OAuth + JWT
+auth, roadmap persistence, the My Roadmaps list (continue / rename / delete),
+roadmap title rename, override-vs-save-new logic, the manual-create flow + guided
+empty editor, and the Wayforge redesign (green tokens, light/dark themes).
 
 Not built yet: publishing roadmaps, drag-to-connect edges, and undo/redo. See
 `the project notes` for the current scope map.
+
+## License
+
+No license is set yet — add a `LICENSE` file before relying on this publicly.
+Until then, all rights reserved by the author.
