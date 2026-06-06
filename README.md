@@ -21,7 +21,7 @@ progress, and edit topics inline.
 - **Smart save** — the viewer tracks unsaved edits; saving an already-saved
   roadmap lets you **update in place** or **save as a new copy**.
 - **Rate-limited generation** — `/generate` requires sign-in and enforces
-  per-user limits (5/hour, 15/day) plus a global daily ceiling, with counters
+  per-user limits (3/hour, 15/day) plus a global daily ceiling, with counters
   persisted in Postgres so they survive cold starts. The intake form shows a
   heads-up when you're near the limit.
 

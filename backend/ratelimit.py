@@ -6,7 +6,7 @@ cold start and be useless). Windows are fixed and UTC-aligned: one row per
 (scope, subject_key, period, window_start).
 
 Limits (authenticated users only — identity is always the user id):
-  - per user:   5 / hour  AND  15 / day
+  - per user:   3 / hour  AND  15 / day
   - global:     120 / day  (hard ceiling protecting Gemini ~500 RPD + Serper)
 """
 
@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models import RateLimitCounter
 
-USER_PER_HOUR = 5
+USER_PER_HOUR = 3
 USER_PER_DAY = 15
 GLOBAL_PER_DAY = 120
 
