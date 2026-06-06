@@ -2,10 +2,9 @@ import { useState } from "react";
 import { useRoadmapStore } from "../store/roadmapStore";
 import { Legend } from "./Legend";
 import { SaveChoiceModal } from "./SaveChoiceModal";
-
-/** Shared base styling for a header button — keeps the buttons consistent. */
-const BTN_BASE =
-  "mt-1 inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500";
+import { ThemeToggle } from "./ThemeToggle";
+import { AppMenu } from "./AppMenu";
+import { Icon } from "./icons";
 
 /** Derived save-button presentation from the (savedRoadmapId, isDirty, saveStatus)
  * triple. `saveStatus` only carries the transient saving/error states; the rest
@@ -14,39 +13,44 @@ function saveButton(
   saved: boolean,
   dirty: boolean,
   status: "idle" | "saving" | "error",
-): { label: string; style: string; disabled: boolean } {
+): { label: string; className: string; disabled: boolean; showCheck: boolean } {
   if (status === "saving") {
     return {
       label: "Saving…",
-      style: "bg-indigo-600 text-white opacity-70 cursor-not-allowed",
+      className: "pf-btn pf-btn--primary opacity-75 cursor-not-allowed",
       disabled: true,
+      showCheck: false,
     };
   }
   if (status === "error") {
     return {
       label: "Save failed — retry",
-      style: "bg-red-600 text-white hover:bg-red-700",
+      className: "pf-btn pf-btn--danger",
       disabled: false,
+      showCheck: false,
     };
   }
   if (!saved) {
     return {
-      label: "Save Roadmap",
-      style: "bg-indigo-600 text-white hover:bg-indigo-700",
+      label: "Save roadmap",
+      className: "pf-btn pf-btn--primary",
       disabled: false,
+      showCheck: false,
     };
   }
   if (dirty) {
     return {
       label: "Save changes",
-      style: "bg-indigo-600 text-white hover:bg-indigo-700",
+      className: "pf-btn pf-btn--primary",
       disabled: false,
+      showCheck: false,
     };
   }
   return {
-    label: "Saved ✓",
-    style: "bg-emerald-600 text-white cursor-default",
+    label: "Saved",
+    className: "pf-btn pf-btn--secondary cursor-default",
     disabled: true,
+    showCheck: true,
   };
 }
 
@@ -91,15 +95,16 @@ export function ViewerHeader() {
   };
 
   return (
-    <header className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-6 pl-16 pr-6 pt-8">
-      <div className="flex items-start gap-4">
+    <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-bg px-6 py-3.5">
+      <div className="flex min-w-0 items-center gap-4">
         <button
-          onClick={() => setView("intake")}
-          className="mt-1 inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          onClick={() => setView("home")}
+          className="pf-btn pf-btn--secondary pf-btn--sm shrink-0"
+          style={{ height: 38 }}
         >
-          ← New Roadmap
+          <Icon.plus /> New roadmap
         </button>
-        <div>
+        <div className="min-w-0">
           {editingTitle ? (
             <input
               autoFocus
@@ -110,43 +115,53 @@ export function ViewerHeader() {
                 if (e.key === "Enter") commitTitle();
                 if (e.key === "Escape") setEditingTitle(false);
               }}
-              className="w-full max-w-md rounded-md border border-slate-300 px-2 py-1 text-2xl font-semibold tracking-tight text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              className="pf-input max-w-md font-display text-h3 font-bold"
+              style={{ padding: "4px 10px" }}
               aria-label="Roadmap title"
             />
           ) : (
             <button
               onClick={startEditing}
               title="Rename roadmap"
-              className="group inline-flex items-center gap-2 rounded-md text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              className="group flex items-center gap-2 rounded-md text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+              <h1 className="truncate font-display text-h3 font-bold tracking-tight text-text">
                 {title}
               </h1>
-              <PencilIcon className="text-slate-400 opacity-0 transition group-hover:opacity-100" />
+              <span className="text-text-4 opacity-0 transition group-hover:opacity-100">
+                <Icon.pencil />
+              </span>
             </button>
           )}
-          <p className="mt-1 text-sm text-slate-600">{topic || "Your topic"}</p>
+          <p className="mt-0.5 truncate text-sm text-text-3">
+            {topic || "Manual roadmap"}
+          </p>
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5">
         {user ? (
           <button
             onClick={onSaveClick}
             disabled={btn.disabled}
-            className={`${BTN_BASE} ${btn.style}`}
+            className={btn.className}
+            style={{ height: 38 }}
           >
+            {btn.showCheck && <Icon.check />}
             {btn.label}
           </button>
         ) : (
           <button
             onClick={() => setView("login")}
-            className={`${BTN_BASE} border border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50`}
+            className="pf-btn pf-btn--secondary pf-btn--sm"
+            style={{ height: 38 }}
           >
             Sign in to save
           </button>
         )}
         <Legend />
+        <ThemeToggle size={38} />
+        <AppMenu />
       </div>
 
       {showSavePrompt && (
@@ -163,25 +178,5 @@ export function ViewerHeader() {
         />
       )}
     </header>
-  );
-}
-
-function PencilIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-      className={className}
-    >
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-    </svg>
   );
 }

@@ -6,6 +6,7 @@ import { useRoadmapStore } from "../../store/roadmapStore";
 import { StatusToggle } from "./StatusToggle";
 import { BranchCreatorPopover } from "./BranchCreatorPopover";
 import { NodeTitle } from "./NodeTitle";
+import { Icon } from "../icons";
 
 interface NodeShellProps {
   node: RoadmapNode;
@@ -49,15 +50,20 @@ export function NodeShell({
       style={{ width: size.width, height: size.height }}
       className={[
         "group relative flex items-center justify-center rounded-lg px-3",
-        "cursor-pointer transition-shadow hover:shadow-md",
+        "cursor-pointer shadow-sm transition-shadow hover:shadow-md",
+        node.status === "skipped" && applyStatusColors ? "opacity-[0.78]" : "",
         applyStatusColors ? STATUS_NODE_CLASSES[node.status] : "",
         containerClassName,
-        isSelected ? "ring-2 ring-offset-2 ring-slate-400" : "",
+        isSelected ? "ring-2 ring-accent ring-offset-2 ring-offset-bg" : "",
       ].join(" ")}
     >
       {/* Incoming-edge anchor (top) and outgoing-edge anchor (bottom). Dragging
           to connect is disabled at the ReactFlow level. */}
-      <Handle type="target" position={Position.Top} className="!bg-slate-400" />
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="!h-1.5 !w-1.5 !border-0 !bg-border-strong"
+      />
 
       {/* Title fills the full fixed width and truncates on a single line; the
           status toggle is absolutely positioned so it never reduces this width.
@@ -73,7 +79,7 @@ export function NodeShell({
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!bg-slate-400"
+        className="!h-1.5 !w-1.5 !border-0 !bg-border-strong"
       />
 
       {/* Branch creator: "+" at the bottom-right corner, away from the status
@@ -87,9 +93,9 @@ export function NodeShell({
             e.stopPropagation();
             openBranchCreator(node.id);
           }}
-          className="nodrag nopan absolute -bottom-2 -right-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-slate-800 text-xs leading-none text-white opacity-0 shadow transition-opacity hover:bg-slate-700 group-hover:opacity-100"
+          className="nodrag nopan absolute -bottom-2 -right-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-xs leading-none text-accent-on shadow transition-opacity hover:bg-accent-hover group-hover:opacity-100 md:opacity-0"
         >
-          +
+          <Icon.plus width={12} height={12} />
         </button>
       )}
 

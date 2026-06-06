@@ -34,29 +34,31 @@ export function BranchCreatorPopover({ parentId }: { parentId: string }) {
 
   return (
     <div
-      className="nodrag nopan absolute left-1/2 top-full z-50 mt-2 flex w-56 -translate-x-1/2 flex-col gap-3 rounded-lg border border-node-border bg-white p-3 text-left text-slate-800 shadow-lg"
+      className="nodrag nopan absolute left-1/2 top-full z-50 mt-2 flex w-60 -translate-x-1/2 flex-col gap-3 rounded-lg border border-border bg-surface p-3 text-left text-text shadow-lg"
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >
       <AutoGrowTextarea
         autoFocus
         value={title}
-        placeholder="Title"
+        placeholder="New topic title"
         onChange={(e) => setTitle(e.target.value)}
         onEnter={submit}
         onKeyDown={(e) => {
           if (e.key === "Escape") closeBranchCreator();
         }}
-        className="block w-full rounded-md border border-node-border px-2 py-1.5 text-sm leading-5 text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none"
+        className="pf-input block w-full leading-5"
+        style={{ padding: "8px 10px" }}
       />
 
-      <fieldset className="flex flex-col gap-1">
-        <legend className="mb-1 text-xs font-medium text-slate-500">Type</legend>
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className="mb-1 text-xs font-semibold text-text-3">Type</legend>
         {NODE_TYPES.map((opt) => (
-          <label key={opt.value} className="flex items-center gap-2 text-sm text-slate-700">
+          <label key={opt.value} className="flex items-center gap-2 text-sm text-text-2">
             <input
               type="radio"
               name="branch-type"
+              className="accent-accent"
               checked={type === opt.value}
               onChange={() => setType(opt.value)}
             />
@@ -65,13 +67,14 @@ export function BranchCreatorPopover({ parentId }: { parentId: string }) {
         ))}
       </fieldset>
 
-      <fieldset className="flex flex-col gap-1">
-        <legend className="mb-1 text-xs font-medium text-slate-500">Edge</legend>
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className="mb-1 text-xs font-semibold text-text-3">Edge</legend>
         {EDGE_TYPES.map((opt) => (
-          <label key={opt.value} className="flex items-center gap-2 text-sm text-slate-700">
+          <label key={opt.value} className="flex items-center gap-2 text-sm text-text-2">
             <input
               type="radio"
               name="branch-edge"
+              className="accent-accent"
               checked={edgeType === opt.value}
               onChange={() => setEdgeType(opt.value)}
             />
@@ -85,14 +88,14 @@ export function BranchCreatorPopover({ parentId }: { parentId: string }) {
           type="button"
           onClick={submit}
           disabled={!title.trim()}
-          className="flex-1 rounded-md bg-slate-800 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
+          className="pf-btn pf-btn--primary pf-btn--sm flex-1 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Add
         </button>
         <button
           type="button"
           onClick={closeBranchCreator}
-          className="flex-1 rounded-md border border-node-border px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
+          className="pf-btn pf-btn--ghost pf-btn--sm flex-1"
         >
           Cancel
         </button>

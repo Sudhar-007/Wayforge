@@ -12,6 +12,25 @@ body,
   height: 100%;
 }
 
+/* React Flow controls → Wayforge tokens (the canvas Controls widget). */
+.react-flow__controls {
+  box-shadow: var(--shadow-md);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.react-flow__controls-button {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-2);
+}
+.react-flow__controls-button:hover {
+  background: var(--surface-2);
+}
+.react-flow__controls-button svg {
+  fill: currentColor;
+}
+
 /* Indeterminate loading bar sweep (Loading screen). */
 @keyframes wf-load {
   0% {

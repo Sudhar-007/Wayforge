@@ -16,7 +16,7 @@ export function PrimaryNode({ data }: NodeProps<RoadmapFlowNode>) {
     <NodeShell
       node={node}
       isSelected={isSelected}
-      containerClassName="border-2 text-slate-800 text-sm font-medium"
+      containerClassName="border text-text text-sm font-medium"
       titleClassName="text-center"
     />
   );

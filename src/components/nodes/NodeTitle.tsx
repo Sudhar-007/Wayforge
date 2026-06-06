@@ -76,12 +76,12 @@ export function NodeTitle({
                   ? "translate(-50%, -100%)"
                   : "translate(-50%, 0)",
             }}
-            className="pointer-events-none z-50 max-w-[320px] break-words rounded-md bg-slate-900 px-2.5 py-1.5 text-xs font-medium text-white shadow-lg"
+            className="pointer-events-none z-50 max-w-[320px] break-words rounded-md bg-text px-2.5 py-1.5 text-xs font-medium text-bg shadow-lg"
           >
             {title}
             <span
               aria-hidden
-              className="absolute left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 bg-slate-900"
+              className="absolute left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 bg-text"
               style={pos.placement === "above" ? { bottom: -3 } : { top: -3 }}
             />
           </div>,
