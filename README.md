@@ -41,12 +41,18 @@ resource search, PostgreSQL (async SQLAlchemy + Alembic) for persistence.
 
 ```
 .
-├── src/                  # Frontend app (the real one)
-│   ├── components/       # UI + custom React Flow nodes (components/nodes/)
-│   ├── store/            # Zustand state (roadmapStore.ts)
-│   ├── lib/              # Graph layout logic + API helpers
-│   ├── data/             # Mock roadmap data
-│   └── types/            # roadmap.ts — the shared data contract
+├── frontend/             # Vite + React app
+│   ├── index.html
+│   ├── src/
+│   │   ├── components/   # UI + custom React Flow nodes (components/nodes/)
+│   │   ├── store/        # Zustand state (roadmapStore.ts)
+│   │   ├── lib/          # Graph layout logic + helpers
+│   │   ├── styles/       # Design tokens
+│   │   └── types/        # roadmap.ts — the shared data contract
+│   ├── mock-roadmap.json # Canonical example payload (data contract)
+│   ├── package.json
+│   ├── vite.config.ts    # + tailwind.config.js, postcss.config.js, tsconfig.json
+│   └── .env.example      # frontend env (VITE_API_BASE_URL)
 ├── backend/              # FastAPI app + AI pipeline
 │   ├── main.py           # API entrypoint (/generate, /auth, /roadmaps, /limits, /health)
 │   ├── auth.py           # JWT sessions + current-user dependency
@@ -61,16 +67,17 @@ resource search, PostgreSQL (async SQLAlchemy + Alembic) for persistence.
 │   ├── models.py         # ORM models (User, Roadmap, RateLimitCounter)
 │   ├── schemas.py        # Pydantic schemas
 │   └── alembic/          # DB migrations
+├── Dockerfile            # Backend image (built from the repo root)
 ├── docker-compose.yml    # PostgreSQL 16
-├── mock-roadmap.json     # Canonical example payload (data contract)
-└── the project notes             # Project guide / scope discipline
+└── deploy-swa.sh         # + migrate-azure.sh — deploy helpers
 ```
 
 ## Data contract
 
 The roadmap schema is the source of truth for both ends of the app:
-`mock-roadmap.json` is the canonical example and `src/types/roadmap.ts` holds
-the matching TypeScript types. Backend output and frontend rendering must both
+`frontend/mock-roadmap.json` is the canonical example and
+`frontend/src/types/roadmap.ts` holds the matching TypeScript types. Backend
+output and frontend rendering must both
 conform. If the schema changes, update both together. Saved roadmaps store this
 full document in the `roadmaps.data` JSONB column.
 
@@ -121,12 +128,13 @@ services. (GitHub sign-in still requires the OAuth + JWT values.)
 ### 3. Frontend
 
 ```bash
+cd frontend
 npm install
 npm run dev          # http://localhost:5173
 ```
 
 The frontend reads `VITE_API_BASE_URL` (default `http://localhost:8000`) — see
-the root `.env.example`.
+`frontend/.env.example`.
 
 ## Testing the pipeline
 
@@ -163,7 +171,10 @@ The backend is containerized (`Dockerfile`, built from the repo root) and runs o
 Static Web Apps**; persistence is **Azure Database for PostgreSQL**. Postgres TLS
 is enabled per-driver via the `DB_SSL` env var. Prod required env vars are listed
 in `backend/.env.example` plus the frontend's build-time `VITE_API_BASE_URL`.
-Operational specifics live in `the project notes`.
+
+The frontend is built with `cd frontend && npm run build` (outputs `frontend/dist`)
+and shipped with `deploy-swa.sh`; the backend image is built from the repo root
+(`docker build -f Dockerfile .`).
 
 ## Status
 
@@ -172,8 +183,7 @@ auth, roadmap persistence, the My Roadmaps list (continue / rename / delete),
 roadmap title rename, override-vs-save-new logic, the manual-create flow + guided
 empty editor, and the Wayforge redesign (green tokens, light/dark themes).
 
-Not built yet: publishing roadmaps, drag-to-connect edges, and undo/redo. See
-`the project notes` for the current scope map.
+Not built yet: publishing roadmaps, drag-to-connect edges, and undo/redo.
 
 ## License
 
