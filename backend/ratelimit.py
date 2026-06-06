@@ -150,7 +150,7 @@ async def enforce_generate_limit(db: AsyncSession, user_id: uuid.UUID) -> dict:
         _raise_429(
             "global_day",
             GLOBAL_PER_DAY,
-            "Pathfinder has reached its daily generation capacity. Please try again tomorrow.",
+            "Wayforge has reached its daily generation capacity. Please try again tomorrow.",
             day_start,
             timedelta(days=1),
         )

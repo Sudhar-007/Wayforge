@@ -1,4 +1,4 @@
-"""Database connection setup for Pathfinder.
+"""Database connection setup for Wayforge.
 
 Provides the async SQLAlchemy engine/session used by FastAPI request handlers,
 plus a sync URL that Alembic uses for migrations (Alembic runs synchronously).

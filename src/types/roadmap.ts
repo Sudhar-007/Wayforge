@@ -1,5 +1,5 @@
 /**
- * Type definitions for a Pathfinder learning roadmap.
+ * Type definitions for a Wayforge learning roadmap.
  *
  * A roadmap is rendered as a directed acyclic graph (DAG): `nodes` are the
  * topics/sections and `edges` describe the prerequisite relationships between

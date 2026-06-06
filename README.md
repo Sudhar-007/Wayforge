@@ -1,8 +1,8 @@
-# Pathfinder
+# Wayforge
 
 **Live app: [wayforge.page](https://wayforge.page)**
 
-Pathfinder is an AI-generated CS learning roadmap tool. You describe what you
+Wayforge is an AI-generated CS learning roadmap tool. You describe what you
 want to learn, an AI pipeline generates a structured roadmap, and the app
 renders it as an editable directed acyclic graph (DAG) styled similarly to
 roadmap.sh. Sign in with GitHub to save roadmaps to your account, track

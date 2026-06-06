@@ -1,4 +1,4 @@
-# Pathfinder Pipeline Testing Guide
+# Wayforge Pipeline Testing Guide
 
 How to manually exercise the AI roadmap pipeline end to end.
 

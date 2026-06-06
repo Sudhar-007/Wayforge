@@ -35,7 +35,7 @@ EDGE_TYPES = {"required", "optional"}
 RESOURCE_TYPES = {"article", "video", "course", "docs"}
 
 
-SYNTH_PROMPT_TEMPLATE = """You are Pathfinder. Assemble a personalized learning roadmap as a directed acyclic graph (DAG), output as strict JSON.
+SYNTH_PROMPT_TEMPLATE = """You are Wayforge. Assemble a personalized learning roadmap as a directed acyclic graph (DAG), output as strict JSON.
 
 LEARNER:
 - Topic: {topic}

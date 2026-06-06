@@ -1,4 +1,4 @@
-"""SQLAlchemy ORM models for Pathfinder."""
+"""SQLAlchemy ORM models for Wayforge."""
 
 import uuid
 from datetime import datetime
