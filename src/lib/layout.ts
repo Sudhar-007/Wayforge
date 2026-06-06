@@ -23,13 +23,14 @@ export const NODE_SIZES: Record<NodeType, { width: number; height: number }> = {
 };
 
 /**
- * Edge stroke colors, mirroring the `edge.*` tokens in tailwind.config.js.
- * React Flow edges are SVG and take inline `style`, not Tailwind classes, so we
- * keep this small map in sync with the config by hand.
+ * Edge stroke colors. React Flow edges are SVG and take inline `style`, not
+ * Tailwind classes, so we reference the `--edge-*` CSS variables directly — this
+ * keeps the strokes in sync with the design tokens and theme-aware (they flip
+ * under [data-theme="dark"]).
  */
 const EDGE_COLORS = {
-  required: "#475569", // edge.required
-  optional: "#94a3b8", // edge.optional
+  required: "var(--edge-required)",
+  optional: "var(--edge-optional)",
 } as const;
 
 const DAGRE_CONFIG = {

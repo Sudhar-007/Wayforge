@@ -18,19 +18,20 @@ export const STATUS_GLYPHS: Record<NodeStatus, string> = {
 
 /**
  * Border + background tint applied to a node by status. Full literal class
- * strings (no interpolation) so Tailwind's content scanner emits them.
+ * strings (no interpolation) so Tailwind's content scanner emits them. Maps onto
+ * the Wayforge `status-*` design tokens (see src/export/DESIGN-TOKENS.md).
  */
 export const STATUS_NODE_CLASSES: Record<NodeStatus, string> = {
-  not_started: "border-status-notStarted/40 bg-node-bg",
-  in_progress: "border-status-inProgress bg-status-inProgress/10",
+  not_started: "border-node-border bg-node-surface",
+  in_progress: "border-status-in-progress bg-status-in-progress/10",
   completed: "border-status-completed bg-status-completed/10",
-  skipped: "border-status-skipped/50 bg-status-skipped/10",
+  skipped: "border-status-skipped/60 bg-status-skipped/[0.07]",
 };
 
 /** Status accent color, used for the toggle glyph and panel dots. */
 export const STATUS_TEXT_CLASSES: Record<NodeStatus, string> = {
-  not_started: "text-status-notStarted",
-  in_progress: "text-status-inProgress",
+  not_started: "text-status-not-started",
+  in_progress: "text-status-in-progress",
   completed: "text-status-completed",
   skipped: "text-status-skipped",
 };

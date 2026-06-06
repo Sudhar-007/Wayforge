@@ -62,6 +62,25 @@ export interface BranchInput {
   edgeType: EdgeType;
 }
 
+/** Color theme. Mirrors the `data-theme` attribute on <html>. */
+export type Theme = "light" | "dark";
+
+const THEME_STORAGE_KEY = "wayforge_theme";
+
+/** Read the persisted theme (falls back to the attribute set by the pre-paint
+ * script in index.html, then to light). Safe outside the browser. */
+function initialTheme(): Theme {
+  if (typeof document !== "undefined") {
+    const attr = document.documentElement.getAttribute("data-theme");
+    if (attr === "dark" || attr === "light") return attr;
+  }
+  if (typeof localStorage !== "undefined") {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    if (saved === "dark" || saved === "light") return saved;
+  }
+  return "light";
+}
+
 /** Which top-level screen is showing. */
 export type AppView =
   | "home"
@@ -113,6 +132,16 @@ interface RoadmapStore {
   /** Node whose inline branch-creator popover is currently open, if any. */
   branchingNodeId: string | null;
 
+  // Color theme (light/dark). UI-only; flips `data-theme` on <html> and the
+  // design tokens do the rest. Persisted to localStorage.
+  theme: Theme;
+  toggleTheme: () => void;
+
+  // Which global modal is open, if any (currently just the manual-create dialog).
+  modal: "manual" | null;
+  openModal: (modal: "manual") => void;
+  closeModal: () => void;
+
   // Front-of-funnel flow (home → intake → loading → viewer).
   view: AppView;
   form: RoadmapForm;
@@ -154,6 +183,10 @@ interface RoadmapStore {
   renameRoadmapById: (id: string, title: string) => Promise<void>;
 
   loadRoadmap: (roadmap: Roadmap) => void;
+  /** Start a blank manual roadmap with the given title and open the editor. */
+  createManualRoadmap: (title: string) => void;
+  /** Seed the first node onto an empty canvas (guided empty-editor state). */
+  addRootNode: () => void;
   selectNode: (id: string | null) => void;
 
   setView: (view: AppView) => void;
@@ -188,6 +221,9 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
   positions: {},
   selectedNodeId: null,
   branchingNodeId: null,
+
+  theme: initialTheme(),
+  modal: null,
 
   view: "home",
   form: INITIAL_FORM,
@@ -463,7 +499,76 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
   loadRoadmap: (roadmap) =>
     set({ roadmap, positions: computeDagreLayout(roadmap), isDirty: false }),
 
+  // Manual path: start from a blank canvas with just a title. No backend call —
+  // the empty roadmap goes straight into the viewer, where the guided
+  // empty-editor state prompts the user to add their first node. Save state is
+  // reset so it behaves like a brand-new, unsaved roadmap.
+  createManualRoadmap: (title) =>
+    set({
+      roadmap: {
+        id: crypto.randomUUID(),
+        title: title.trim() || "Untitled roadmap",
+        description: "",
+        nodes: [],
+        edges: [],
+      },
+      positions: {},
+      form: INITIAL_FORM,
+      selectedNodeId: null,
+      branchingNodeId: null,
+      savedRoadmapId: null,
+      saveStatus: "idle",
+      isDirty: false,
+      modal: null,
+      view: "viewer",
+    }),
+
+  // Seed the first node onto an empty canvas (the "Add your first node" action in
+  // the empty-editor state). Places a single primary node near the top-center and
+  // selects it so the detail panel opens for immediate editing. Subsequent nodes
+  // are added via the existing hover-"+" branch flow (addChildNode).
+  addRootNode: () =>
+    set((state) => {
+      if (!state.roadmap) return state;
+
+      const newId = crypto.randomUUID();
+      const newNode: RoadmapNode = {
+        id: newId,
+        title: "First topic",
+        description: "",
+        type: "primary",
+        status: "not_started",
+        resources: [],
+      };
+      const size = NODE_SIZES.primary;
+
+      return {
+        roadmap: {
+          ...state.roadmap,
+          nodes: [...state.roadmap.nodes, newNode],
+        },
+        positions: { ...state.positions, [newId]: { x: -size.width / 2, y: 40 } },
+        selectedNodeId: newId,
+        isDirty: true,
+      };
+    }),
+
   selectNode: (id) => set({ selectedNodeId: id }),
+
+  toggleTheme: () =>
+    set((state) => {
+      const theme: Theme = state.theme === "light" ? "dark" : "light";
+      if (typeof document !== "undefined") {
+        document.documentElement.setAttribute("data-theme", theme);
+      }
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem(THEME_STORAGE_KEY, theme);
+      }
+      return { theme };
+    }),
+
+  openModal: (modal) => set({ modal }),
+  closeModal: () => set({ modal: null }),
 
   setView: (view) => set({ view }),
   setForm: (form) => set({ form }),

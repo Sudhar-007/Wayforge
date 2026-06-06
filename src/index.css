@@ -1,3 +1,7 @@
+/* Wayforge design tokens load before Tailwind layers so the semantic utilities
+   resolve to var(--token) and flip with [data-theme]. See DESIGN-TOKENS.md. */
+@import "./styles/wayforge.tokens.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,10 +10,4 @@ html,
 body,
 #root {
   height: 100%;
-}
-
-body {
-  margin: 0;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    Helvetica, Arial, sans-serif;
 }
