@@ -1,112 +1,126 @@
 import { useRoadmapStore } from "../store/roadmapStore";
+import { Nav } from "./Nav";
+import { Icon } from "./icons";
 
-/** Landing screen. Adapted from lovable-screens.tsx; wired to the store. */
+/**
+ * Landing screen. Two creation paths — "Create with AI" (primary, → intake) and
+ * "Create manually" (secondary, → manual-create modal). Auth is enforced
+ * downstream (generate requires a token; manual roadmaps prompt "Sign in to save"
+ * in the viewer), so the cards stay active regardless of sign-in state.
+ */
 export function Home() {
   const setView = useRoadmapStore((s) => s.setView);
-  const user = useRoadmapStore((s) => s.user);
-
-  // Logged-out visitors are routed through login first; logged-in users go
-  // straight to the intake form.
-  const startCta = user
-    ? { label: "Create your roadmap", to: "intake" as const }
-    : { label: "Login to create your roadmap", to: "login" as const };
+  const openModal = useRoadmapStore((s) => s.openModal);
 
   return (
     <div className="flex min-h-screen flex-col">
-      <AuthHeader />
-      <main className="flex flex-1 flex-col items-center justify-center px-6 py-24">
-        <div className="mx-auto max-w-2xl text-center">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
-            <span className="h-1.5 w-1.5 rounded-full bg-indigo-600" />
+      <Nav />
+      <main className="flex-1">
+        <section className="mx-auto w-full max-w-5xl px-6 pb-16 pt-16 text-center sm:pt-24">
+          <span className="pf-pill">
+            <span className="dot" />
             AI-powered learning paths
-          </div>
-          <h1 className="text-6xl font-semibold tracking-tight text-slate-900 sm:text-7xl">
-            Pathfinder
+          </span>
+          <h1 className="mx-auto mt-6 max-w-3xl font-display text-h1 font-bold tracking-tight text-text sm:text-display">
+            Learn anything, in the right order.
           </h1>
-          <p className="mt-4 text-xl text-slate-700">
-            Your AI-guided path to any skill
+          <p className="mx-auto mt-5 max-w-2xl text-lg text-text-2">
+            Tell Wayforge your goal, level, and weekly time. We map it into a
+            structured, resource-backed roadmap — or build your own, node by node.
           </p>
-          <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-slate-600">
-            Tell Pathfinder what you want to learn, your current level, and how much
-            time you can dedicate each week. We&rsquo;ll generate a structured,
-            personalized roadmap with the right resources in the right order — so you
-            stop guessing and start learning.
-          </p>
-          <div className="mt-10">
+
+          <div className="mx-auto mt-12 grid max-w-3xl grid-cols-1 gap-5 text-left sm:grid-cols-2">
             <button
-              onClick={() => setView(startCta.to)}
-              className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-6 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+              onClick={() => setView("intake")}
+              className="pf-card pf-card--hover group relative overflow-hidden p-6 text-left"
             >
-              {startCta.label}
-              <span aria-hidden className="ml-2">
-                →
-              </span>
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 -top-px h-32 opacity-80"
+                style={{
+                  background:
+                    "radial-gradient(420px 180px at 30% -10%, var(--accent-soft), transparent)",
+                }}
+              />
+              <div className="relative">
+                <span className="inline-flex rounded-pill bg-accent-soft px-2.5 py-1 font-mono text-eyebrow uppercase text-accent">
+                  Recommended
+                </span>
+                <div className="mt-4 flex h-11 w-11 items-center justify-center rounded-md bg-accent text-accent-on shadow-sm">
+                  <Icon.spark />
+                </div>
+                <h3 className="mt-4 font-display text-h3 font-bold text-text">
+                  Create with AI
+                </h3>
+                <p className="mt-2 text-sm text-text-2">
+                  Answer a few quick questions. We&rsquo;ll generate a structured
+                  roadmap with the right resources, in the right order.
+                </p>
+                <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-accent">
+                  Start with AI{" "}
+                  <Icon.arrow className="transition-transform group-hover:translate-x-0.5" />
+                </span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => openModal("manual")}
+              className="pf-card pf-card--hover group relative overflow-hidden p-6 text-left"
+            >
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 -top-px h-32 opacity-80"
+                style={{
+                  background:
+                    "radial-gradient(420px 180px at 30% -10%, var(--surface-3), transparent)",
+                }}
+              />
+              <div className="relative">
+                <div className="flex h-11 w-11 items-center justify-center rounded-md border border-border-strong bg-surface-2 text-text-2">
+                  <Icon.penPlus />
+                </div>
+                <h3 className="mt-4 font-display text-h3 font-bold text-text">
+                  Create manually
+                </h3>
+                <p className="mt-2 text-sm text-text-2">
+                  Start from a blank canvas and build your own roadmap, adding and
+                  branching nodes exactly how you want.
+                </p>
+                <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-text">
+                  Build my own{" "}
+                  <Icon.arrow className="transition-transform group-hover:translate-x-0.5" />
+                </span>
+              </div>
             </button>
           </div>
-        </div>
 
-        <section className="mt-24 grid w-full max-w-4xl grid-cols-1 gap-6 sm:grid-cols-3">
-          <Feature
-            icon="◎"
-            title="Personalized"
-            body="Built around your goal, level, and weekly time budget — not a generic syllabus."
-          />
-          <Feature
-            icon="✦"
-            title="AI-generated"
-            body="Curated steps and resources, ordered for the fastest path to real progress."
-          />
-          <Feature
-            icon="✎"
-            title="Editable"
-            body="Tweak, reorder, or skip steps. Your roadmap adapts as you learn."
-          />
+          <section className="mx-auto mt-16 grid max-w-4xl grid-cols-1 gap-5 text-left sm:grid-cols-3">
+            <Feature
+              icon={<Icon.target />}
+              title="Personalized"
+              body="Built around your goal, level, and weekly time budget — not a generic syllabus."
+            />
+            <Feature
+              icon={<Icon.route />}
+              title="Structured"
+              body="Curated steps and resources, ordered for the fastest path to real progress."
+            />
+            <Feature
+              icon={<Icon.edit />}
+              title="Editable"
+              body="Tweak, reorder, branch, or skip steps. Your roadmap adapts as you learn."
+            />
+          </section>
         </section>
       </main>
-      <Footer />
-    </div>
-  );
-}
 
-/** Top-right auth controls: signed-in identity + sign out, or a sign-in link. */
-function AuthHeader() {
-  const user = useRoadmapStore((s) => s.user);
-  const clearAuth = useRoadmapStore((s) => s.clearAuth);
-  const setView = useRoadmapStore((s) => s.setView);
-
-  return (
-    <header className="flex items-center justify-end px-6 py-4">
-      {user ? (
-        <div className="flex items-center gap-3">
-          {user.avatar_url && (
-            <img
-              src={user.avatar_url}
-              alt=""
-              className="h-8 w-8 rounded-full border border-slate-200"
-            />
-          )}
-          <span className="text-sm font-medium text-slate-700">
-            {user.github_username}
-          </span>
-          <button
-            onClick={() => {
-              clearAuth();
-              setView("home");
-            }}
-            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
-          >
-            Sign out
-          </button>
+      <footer className="border-t border-border">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6 text-xs text-text-3">
+          <span>Built for self-directed learners</span>
+          <span className="font-mono">wayforge.page</span>
         </div>
-      ) : (
-        <button
-          onClick={() => setView("login")}
-          className="rounded-lg px-3 py-1.5 text-sm font-medium text-indigo-600 transition hover:text-indigo-700"
-        >
-          Sign in
-        </button>
-      )}
-    </header>
+      </footer>
+    </div>
   );
 }
 
@@ -115,29 +129,17 @@ function Feature({
   title,
   body,
 }: {
-  icon: string;
+  icon: React.ReactNode;
   title: string;
   body: string;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 transition hover:border-slate-300 hover:shadow-sm">
-      <div className="flex h-9 w-9 items-center justify-center rounded-md bg-indigo-50 text-indigo-600">
-        <span aria-hidden className="text-lg">
-          {icon}
-        </span>
+    <div className="pf-card pf-card--hover p-5">
+      <div className="flex h-9 w-9 items-center justify-center rounded-md bg-accent-soft text-accent">
+        {icon}
       </div>
-      <h3 className="mt-4 text-sm font-semibold text-slate-900">{title}</h3>
-      <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{body}</p>
+      <h4 className="mt-4 font-display text-base font-bold text-text">{title}</h4>
+      <p className="mt-1.5 text-sm text-text-2">{body}</p>
     </div>
-  );
-}
-
-function Footer() {
-  return (
-    <footer className="border-t border-slate-200 py-6">
-      <p className="text-center text-xs text-slate-500">
-        Built for self-directed learners
-      </p>
-    </footer>
   );
 }

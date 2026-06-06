@@ -10,10 +10,11 @@ import { Loading } from "./components/Loading";
 import { ViewerHeader } from "./components/ViewerHeader";
 import { Profile } from "./components/Profile";
 import { MyRoadmaps } from "./components/MyRoadmaps";
-import { AppMenu } from "./components/AppMenu";
+import { CreateManualModal } from "./components/CreateManualModal";
 
 export default function App() {
   const view = useRoadmapStore((s) => s.view);
+  const modal = useRoadmapStore((s) => s.modal);
 
   // Authentication bootstrap, runs once on mount:
   //  - If we landed on the OAuth callback (/auth/callback?token=...), capture the
@@ -53,13 +54,9 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 antialiased">
-      {/* Single source of truth for the nav menu; renders null when logged out.
-          Fixed in the top-left corner so it overlays every logged-in screen. */}
-      <div className="fixed left-4 top-4 z-50">
-        <AppMenu />
-      </div>
-
+    <div className="min-h-screen bg-bg text-text antialiased">
+      {/* Nav chrome (brand + theme toggle + account menu) is rendered per-screen
+          by each view via Nav/TopBar/ViewerHeader, not as a global overlay. */}
       {view === "home" && <Home />}
       {view === "login" && <Login />}
       {view === "intake" && <Intake />}
@@ -79,6 +76,9 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Global modals. */}
+      {modal === "manual" && <CreateManualModal />}
     </div>
   );
 }
