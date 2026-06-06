@@ -73,7 +73,7 @@ export function CreateManualModal() {
             Cancel
           </button>
           <button
-            className="pf-btn pf-btn--primary"
+            className="pf-btn pf-btn--primary disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!canSubmit}
             onClick={submit}
           >
