@@ -177,5 +177,4 @@ Not built yet: publishing roadmaps, drag-to-connect edges, and undo/redo. See
 
 ## License
 
-No license is set yet — add a `LICENSE` file before relying on this publicly.
-Until then, all rights reserved by the author.
+Released under the [MIT License](LICENSE).
