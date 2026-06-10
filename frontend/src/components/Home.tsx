@@ -4,13 +4,14 @@ import { Icon } from "./icons";
 
 /**
  * Landing screen. Two creation paths — "Create with AI" (primary, → intake) and
- * "Create manually" (secondary, → manual-create modal). Auth is enforced
- * downstream (generate requires a token; manual roadmaps prompt "Sign in to save"
- * in the viewer), so the cards stay active regardless of sign-in state.
+ * "Create manually" (secondary, → manual-create modal). Both go through
+ * `startCreation`, which enforces sign-in up front: logged-out users are routed
+ * to login (with their chosen path stashed) before entering either flow, so they
+ * never fill out an intake form or build a manual roadmap only to be bounced to
+ * login afterwards.
  */
 export function Home() {
-  const setView = useRoadmapStore((s) => s.setView);
-  const openModal = useRoadmapStore((s) => s.openModal);
+  const startCreation = useRoadmapStore((s) => s.startCreation);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -22,7 +23,7 @@ export function Home() {
             AI-powered learning paths
           </span>
           <h1 className="mx-auto mt-6 max-w-3xl font-display text-h1 font-bold tracking-tight text-text sm:text-display">
-            Learn anything, in the right order.
+            Forge your path, in the right way
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-lg text-text-2">
             Tell Wayforge your goal, level, and weekly time. We map it into a
@@ -31,7 +32,7 @@ export function Home() {
 
           <div className="mx-auto mt-12 grid max-w-3xl grid-cols-1 gap-5 text-left sm:grid-cols-2">
             <button
-              onClick={() => setView("intake")}
+              onClick={() => startCreation("intake")}
               className="pf-card pf-card--hover group relative overflow-hidden p-6 text-left"
             >
               <span
@@ -64,7 +65,7 @@ export function Home() {
             </button>
 
             <button
-              onClick={() => openModal("manual")}
+              onClick={() => startCreation("manual")}
               className="pf-card pf-card--hover group relative overflow-hidden p-6 text-left"
             >
               <span

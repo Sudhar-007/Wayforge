@@ -18,7 +18,8 @@ export function SectionHeaderNode({ data }: NodeProps<RoadmapFlowNode>) {
       isSelected={isSelected}
       applyStatusColors={false}
       showToggle={false}
-      containerClassName="border border-section-surface bg-section-surface text-section-text font-display text-base font-semibold"
+      outline="none"
+      containerClassName="bg-section-surface text-section-text font-display text-base font-semibold"
       titleClassName="text-center"
     />
   );

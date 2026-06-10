@@ -123,6 +123,13 @@ export interface User {
 
 const TOKEN_STORAGE_KEY = "pathfinder_token";
 
+/** Which creation path the user picked before being sent to login. Persisted to
+ * localStorage (not the in-memory store) because the GitHub OAuth flow is a full
+ * page navigation that wipes store state. Read + cleared by `resumePendingCreation`
+ * once the user lands back signed-in. */
+type PendingAction = "intake" | "manual";
+const PENDING_ACTION_KEY = "wayforge_pending_action";
+
 /** The intake form — its shape matches the backend's GenerateRequest exactly. */
 export interface RoadmapForm {
   topic: string;
@@ -210,6 +217,13 @@ interface RoadmapStore {
 
   setView: (view: AppView) => void;
   setForm: (form: RoadmapForm) => void;
+  /** Entry point for both Home creation paths. Enforces sign-in BEFORE the user
+   * invests in a flow: routes to the chosen path when authed, otherwise stashes
+   * the intent and sends them to login. */
+  startCreation: (path: PendingAction) => void;
+  /** After a successful login, resume whichever creation path the user picked
+   * (or default to the AI intake). Called from the OAuth callback handler. */
+  resumePendingCreation: () => void;
   generateRoadmap: () => Promise<void>;
 
   openBranchCreator: (id: string) => void;
@@ -591,6 +605,44 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
 
   setView: (view) => set({ view }),
   setForm: (form) => set({ form }),
+
+  // Gate both Home creation paths on sign-in. Authed users go straight to the
+  // chosen path; logged-out users are sent to login first, with their intent
+  // stashed so `resumePendingCreation` can pick up where they left off after the
+  // OAuth round-trip. Guarding here (rather than only at /generate) avoids the
+  // "fill out the whole form, then get bounced to login" problem, and closes the
+  // manual path that previously never required sign-in at all.
+  startCreation: (path) => {
+    const { token } = get();
+    if (token) {
+      if (path === "manual") set({ modal: "manual" });
+      else set({ view: "intake" });
+      return;
+    }
+    try {
+      localStorage.setItem(PENDING_ACTION_KEY, path);
+    } catch {
+      // localStorage unavailable — login still works, we just default to intake.
+    }
+    set({ view: "login" });
+  },
+
+  // Resume the stashed creation intent after login (default: AI intake). The
+  // manual path lands back on Home with the name-your-roadmap modal open.
+  resumePendingCreation: () => {
+    let pending: string | null = null;
+    try {
+      pending = localStorage.getItem(PENDING_ACTION_KEY);
+      localStorage.removeItem(PENDING_ACTION_KEY);
+    } catch {
+      // ignore — fall through to the intake default
+    }
+    if (pending === "manual") {
+      set({ view: "home", modal: "manual" });
+      return;
+    }
+    set({ view: "intake" });
+  },
 
   // Submit the intake form to the structured backend endpoint and route the
   // result into the existing viewer. Drives loading → viewer (success) or

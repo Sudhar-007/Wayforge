@@ -16,7 +16,8 @@ export function SecondaryNode({ data }: NodeProps<RoadmapFlowNode>) {
     <NodeShell
       node={node}
       isSelected={isSelected}
-      containerClassName="border border-dashed text-text-2 text-sm"
+      outline="dashed"
+      containerClassName="text-text-2 text-sm"
       titleClassName="text-center"
     />
   );

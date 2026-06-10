@@ -26,7 +26,8 @@ export default function App() {
   //    token, populate the user, strip the token from the URL, and route onward.
   //  - Otherwise, restore any persisted session.
   useEffect(() => {
-    const { setAuth, loadCurrentUser, setView } = useRoadmapStore.getState();
+    const { setAuth, loadCurrentUser, setView, resumePendingCreation } =
+      useRoadmapStore.getState();
 
     if (window.location.pathname === "/auth/callback") {
       const token = new URLSearchParams(window.location.search).get("token");
@@ -43,7 +44,9 @@ export default function App() {
             });
             if (res.ok) {
               setAuth(await res.json(), token);
-              setView("intake");
+              // Resume whichever creation path the user picked before login
+              // (defaults to the AI intake).
+              resumePendingCreation();
               return;
             }
           } catch {
