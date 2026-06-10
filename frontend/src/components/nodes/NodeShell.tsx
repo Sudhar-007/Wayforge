@@ -55,6 +55,12 @@ export function NodeShell({
   const size = NODE_SIZES[node.type];
   const branchingNodeId = useRoadmapStore((s) => s.branchingNodeId);
   const openBranchCreator = useRoadmapStore((s) => s.openBranchCreator);
+  // Leaf nodes hide the bottom anchor dot (nothing connects below). The handle
+  // stays mounted, just invisible, so React Flow can still attach a new edge
+  // the moment a branch is created.
+  const hasChildren = useRoadmapStore(
+    (s) => s.roadmap?.edges.some((e) => e.source === node.id) ?? false,
+  );
 
   const isBranching = branchingNodeId === node.id;
   // Hide every "+" while any branch popover is open ("edit mode").
@@ -64,7 +70,7 @@ export function NodeShell({
     <div
       style={{ width: size.width, height: size.height }}
       className={[
-        "group relative flex items-center justify-center rounded-lg px-3",
+        "group relative flex items-center justify-center rounded-md px-3",
         "cursor-pointer shadow-sm transition-shadow hover:shadow-md",
         node.status === "skipped" && applyStatusColors ? "opacity-[0.78]" : "",
         applyStatusColors ? STATUS_NODE_TINT[node.status] : "",
@@ -106,7 +112,9 @@ export function NodeShell({
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!h-1.5 !w-1.5 !border-0 !bg-border-strong"
+        className={`!h-1.5 !w-1.5 !border-0 !bg-border-strong ${
+          hasChildren ? "" : "!opacity-0"
+        }`}
       />
 
       {/* Branch creator: "+" at the bottom-right corner, away from the status

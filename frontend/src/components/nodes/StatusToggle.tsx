@@ -16,12 +16,15 @@ const FILLED: Record<NodeStatus, boolean> = {
   skipped: false,
 };
 
-/** Small status indicator: a hollow ring, a filled dot, or a check (completed). */
+/** Small status indicator: a hollow ring, a filled dot, or a check (completed).
+ * Skipped is faded so it reads distinctly from not-started (similar grays). */
 export function StatusDot({ status, size = 9 }: { status: NodeStatus; size?: number }) {
   const filled = FILLED[status];
   return (
     <span
-      className={`inline-block shrink-0 rounded-full ${STATUS_TEXT_CLASSES[status]}`}
+      className={`inline-block shrink-0 rounded-full ${STATUS_TEXT_CLASSES[status]} ${
+        status === "skipped" ? "opacity-40" : ""
+      }`}
       style={{
         width: size,
         height: size,

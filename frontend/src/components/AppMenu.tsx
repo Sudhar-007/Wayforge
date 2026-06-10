@@ -119,7 +119,7 @@ function MenuItem({
       role="menuitem"
       onClick={onClick}
       className={`block w-full px-3 py-2 text-left text-sm transition hover:bg-surface-2 focus:outline-none focus-visible:bg-surface-2 ${
-        destructive ? "text-[#d64545]" : "text-text-2 hover:text-text"
+        destructive ? "text-danger" : "text-text-2 hover:text-text"
       }`}
     >
       {children}

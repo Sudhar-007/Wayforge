@@ -38,43 +38,29 @@ export function Login() {
   return (
     <div className="min-h-screen">
       <TopBar onBack={() => setView("home")} backLabel="Home" />
-      <main className="flex min-h-[calc(100vh-64px)] items-start justify-center px-6 pt-16">
-        <div className="pf-card w-full max-w-[432px] p-9">
-          <div className="flex justify-center">
-            <span className="pf-pill">
-              <span className="dot" />
-              Welcome to Wayforge
-            </span>
-          </div>
-          <h1 className="mt-4 text-center font-display text-h2 font-bold tracking-tight text-text">
+      <main className="flex min-h-[calc(100vh-64px)] items-start justify-center px-6 pt-20">
+        <div className="w-full max-w-[400px]">
+          <p className="t-eyebrow">Account</p>
+          <h1 className="mt-3 font-display text-h2 font-bold tracking-tight text-text">
             Sign in to continue
           </h1>
-          <p className="mt-2 text-center text-sm text-text-2">
-            Choose your preferred sign-in method below.
+          <p className="mt-2 text-sm text-text-2">
+            Your roadmaps and progress, saved to your account.
           </p>
 
           {error && (
             <div
               role="alert"
-              className="mt-6 rounded-md border border-[#d64545]/30 bg-[#d64545]/10 px-4 py-3 text-sm text-[#d64545]"
+              className="mt-6 rounded-md border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger"
             >
               {error}
             </div>
           )}
 
-          <div className="mt-7 grid gap-2.5">
-            <button
-              disabled
-              title="Coming soon"
-              className="flex h-11 w-full cursor-not-allowed items-center justify-center gap-3 rounded-md border border-border-strong bg-surface px-4 text-sm font-semibold text-text-4 opacity-60"
-            >
-              <Icon.google />
-              Continue with Google
-              <span className="text-xs">soon</span>
-            </button>
+          <div className="mt-8 grid gap-2.5">
             <button
               onClick={() => void onGitHub()}
-              className="flex h-11 w-full items-center justify-center gap-3 rounded-md bg-text px-4 text-sm font-semibold text-bg transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="pf-btn pf-btn--primary pf-btn--lg pf-btn--block"
             >
               <Icon.github />
               Continue with GitHub
@@ -82,23 +68,30 @@ export function Login() {
             <button
               disabled
               title="Coming soon"
-              className="flex h-11 w-full cursor-not-allowed items-center justify-center gap-3 rounded-md border border-border-strong bg-surface px-4 text-sm font-semibold text-text-4 opacity-60"
+              className="pf-btn pf-btn--secondary pf-btn--lg pf-btn--block cursor-not-allowed opacity-50"
+            >
+              <Icon.google />
+              Continue with Google
+              <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-text-4">
+                Soon
+              </span>
+            </button>
+            <button
+              disabled
+              title="Coming soon"
+              className="pf-btn pf-btn--secondary pf-btn--lg pf-btn--block cursor-not-allowed opacity-50"
             >
               <Icon.linkedin />
               Continue with LinkedIn
-              <span className="text-xs">soon</span>
+              <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-text-4">
+                Soon
+              </span>
             </button>
           </div>
 
-          <div className="my-6 flex items-center gap-3">
-            <div className="h-px flex-1 bg-border" />
-            <span className="text-xs text-text-3">Secure authentication</span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
-
-          <p className="text-center text-xs leading-relaxed text-text-3">
-            We only use your profile to identify you. We never post on your behalf
-            and never share your data.
+          <p className="mt-8 border-t border-border pt-5 text-xs leading-relaxed text-text-3">
+            We only use your profile to identify you. We never post on your
+            behalf and never share your data.
           </p>
         </div>
       </main>

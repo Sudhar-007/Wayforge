@@ -42,7 +42,7 @@ export function MyRoadmaps() {
         {status === "error" ? (
           <div
             role="alert"
-            className="mt-10 rounded-md border border-[#d64545]/30 bg-[#d64545]/10 px-4 py-3 text-sm text-[#d64545]"
+            className="mt-10 rounded-md border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger"
           >
             Couldn&rsquo;t load your roadmaps. Please try again.
           </div>

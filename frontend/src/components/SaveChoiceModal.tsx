@@ -33,7 +33,7 @@ export function SaveChoiceModal({
         aria-modal="true"
         aria-labelledby="save-choice-title"
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm rounded-xl border border-border bg-surface p-6 shadow-lg"
+        className="w-full max-w-sm rounded-lg border border-border bg-surface p-6 shadow-lg"
       >
         <h2
           id="save-choice-title"

@@ -160,7 +160,7 @@ export function DetailPanel() {
                 type="button"
                 onClick={() => removeResource(node.id, index)}
                 aria-label={`Remove ${resource.label}`}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-text-3 transition hover:bg-surface-3 hover:text-[#d64545]"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-text-3 transition hover:bg-surface-3 hover:text-danger"
               >
                 <Icon.close />
               </button>

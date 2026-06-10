@@ -37,14 +37,12 @@ export function CreateManualModal() {
         aria-modal="true"
         aria-labelledby="manual-create-title"
         onMouseDown={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-xl border border-border bg-surface p-7 shadow-lg"
+        className="w-full max-w-md rounded-lg border border-border bg-surface p-7 shadow-lg"
       >
-        <div className="flex h-11 w-11 items-center justify-center rounded-md bg-accent-soft text-accent">
-          <Icon.penPlus />
-        </div>
+        <p className="t-eyebrow">Build by hand</p>
         <h2
           id="manual-create-title"
-          className="mt-4 font-display text-h3 font-bold text-text"
+          className="mt-3 font-display text-h3 font-bold text-text"
         >
           Name your roadmap
         </h2>

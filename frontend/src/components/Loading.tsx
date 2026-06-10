@@ -36,21 +36,19 @@ export function Loading({
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
-      <div
-        className="h-10 w-10 animate-spin rounded-full border-2 border-surface-3 border-t-accent"
-        role="status"
-        aria-label="Loading"
-      />
+      <p className="t-eyebrow" role="status" aria-label="Loading">
+        Working
+      </p>
       <p
         key={idx}
-        className="mt-6 text-lg font-semibold text-text transition-opacity duration-300"
+        className="mt-4 font-display text-h3 font-bold text-text transition-opacity duration-300"
         aria-live="polite"
       >
         {messages[idx % count]}
       </p>
-      <p className="mt-1.5 text-sm text-text-3">{subtitle}</p>
-      <div className="mt-7 h-1.5 w-56 overflow-hidden rounded-pill bg-surface-3">
-        <span className="block h-full w-2/5 animate-[wf-load_1.4s_ease-in-out_infinite] rounded-pill bg-accent" />
+      <p className="mt-2 text-sm text-text-3">{subtitle}</p>
+      <div className="mt-8 h-px w-64 overflow-hidden bg-border">
+        <span className="block h-full w-2/5 animate-[wf-load_1.4s_ease-in-out_infinite] bg-accent" />
       </div>
     </div>
   );

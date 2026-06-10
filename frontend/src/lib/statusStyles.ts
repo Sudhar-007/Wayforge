@@ -23,9 +23,9 @@ export const STATUS_GLYPHS: Record<NodeStatus, string> = {
  */
 export const STATUS_NODE_TINT: Record<NodeStatus, string> = {
   not_started: "bg-node-surface",
-  in_progress: "bg-status-in-progress/10",
-  completed: "bg-status-completed/10",
-  skipped: "bg-status-skipped/[0.07]",
+  in_progress: "bg-status-in-progress-soft",
+  completed: "bg-status-completed-soft",
+  skipped: "bg-bg",
 };
 
 /**
@@ -39,7 +39,7 @@ export const STATUS_RING_COLOR: Record<NodeStatus, string> = {
   not_started: "ring-node-border",
   in_progress: "ring-status-in-progress",
   completed: "ring-status-completed",
-  skipped: "ring-status-skipped/60",
+  skipped: "ring-border",
 };
 
 /**
@@ -51,7 +51,7 @@ export const STATUS_BORDER_COLOR: Record<NodeStatus, string> = {
   not_started: "border-node-border",
   in_progress: "border-status-in-progress",
   completed: "border-status-completed",
-  skipped: "border-status-skipped/60",
+  skipped: "border-border",
 };
 
 /** Status accent color, used for the toggle glyph and panel dots. */

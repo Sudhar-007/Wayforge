@@ -91,49 +91,37 @@ function EmptyEditor() {
 
   return (
     <div className="flex h-full items-center justify-center bg-bg px-6">
-      <div className="flex max-w-lg flex-col items-center text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-dashed border-border-strong bg-surface text-accent">
-          <Icon.plus width={26} height={26} />
-        </div>
-        <h2 className="mt-5 font-display text-h2 font-bold tracking-tight text-text">
+      <div className="w-full max-w-md">
+        <p className="t-eyebrow">Blank canvas</p>
+        <h2 className="mt-3 font-display text-h2 font-bold tracking-tight text-text">
           Build your roadmap
         </h2>
-        <p className="mt-2.5 max-w-md text-lg text-text-2">
-          Your canvas is empty. Add your first node, then connect and branch from
-          it to shape your path.
+        <p className="mt-2.5 text-base text-text-2">
+          Add your first node, then connect and branch from it to shape your
+          path.
         </p>
         <button
           onClick={addRootNode}
-          className="pf-btn pf-btn--primary pf-btn--lg mt-6"
+          className="pf-btn pf-btn--primary pf-btn--lg mt-7"
         >
           <Icon.plus /> Add your first node
         </button>
-        <div className="mt-10 grid w-full grid-cols-1 gap-3 text-left sm:grid-cols-3">
-          <Hint icon={<Icon.plus />} title="Add nodes" body="Topics, sections, and optional side-quests." />
-          <Hint icon={<Icon.link />} title="Branch & connect" body="Hover a node and press + to branch." />
-          <Hint icon={<Icon.check />} title="Track status" body="Mark steps as you progress." />
+        <div className="mt-10 flex flex-col divide-y divide-border border-t border-border">
+          <Hint n="01" title="Add nodes" body="Topics, sections, and optional side-quests." />
+          <Hint n="02" title="Branch & connect" body="Hover a node and press + to branch." />
+          <Hint n="03" title="Track status" body="Mark steps as you progress." />
         </div>
       </div>
     </div>
   );
 }
 
-function Hint({
-  icon,
-  title,
-  body,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  body: string;
-}) {
+function Hint({ n, title, body }: { n: string; title: string; body: string }) {
   return (
-    <div className="flex items-start gap-2.5 rounded-lg border border-border bg-surface p-3.5">
-      <span className="mt-0.5 text-accent">{icon}</span>
-      <div>
-        <div className="text-sm font-semibold text-text">{title}</div>
-        <div className="mt-0.5 text-xs text-text-3">{body}</div>
-      </div>
+    <div className="flex items-baseline gap-4 py-3">
+      <span className="font-mono text-xs text-text-4">{n}</span>
+      <span className="text-sm font-medium text-text">{title}</span>
+      <span className="ml-auto text-right text-xs text-text-3">{body}</span>
     </div>
   );
 }
