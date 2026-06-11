@@ -3,6 +3,7 @@ import { useRoadmapStore } from "../store/roadmapStore";
 import { STATUS_LABELS } from "../lib/statusStyles";
 import type { NodeStatus, NodeType, ResourceType } from "../types/roadmap";
 import { AutoGrowTextarea } from "./AutoGrowTextarea";
+import { ConfirmDeleteModal } from "./ConfirmDeleteModal";
 import { StatusDot } from "./nodes/StatusToggle";
 import { Icon } from "./icons";
 
@@ -32,6 +33,7 @@ export function DetailPanel() {
   const deleteNode = useRoadmapStore((s) => s.deleteNode);
 
   const [draft, setDraft] = useState(EMPTY_RESOURCE);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   if (!node) return null;
 
@@ -39,12 +41,6 @@ export function DetailPanel() {
     if (!draft.label.trim() || !draft.url.trim()) return;
     addResource(node.id, draft);
     setDraft(EMPTY_RESOURCE);
-  };
-
-  const handleDelete = () => {
-    if (window.confirm("Delete this node and its connections?")) {
-      deleteNode(node.id);
-    }
   };
 
   return (
@@ -213,14 +209,33 @@ export function DetailPanel() {
         </div>
       </div>
 
-      {/* Delete (destructive) */}
+      {/* Delete (destructive) — shrink-0 keeps the fixed button height from
+          being squashed when the scrollable column overflows. */}
       <button
         type="button"
-        onClick={handleDelete}
-        className="pf-btn pf-btn--danger pf-btn--block mt-auto"
+        onClick={() => setConfirmingDelete(true)}
+        className="pf-btn pf-btn--danger pf-btn--block mt-auto shrink-0"
       >
         <Icon.trash /> Delete node
       </button>
+
+      {confirmingDelete && (
+        <ConfirmDeleteModal
+          title="Delete node"
+          body={
+            <>
+              Delete <span className="font-medium text-text">“{node.title}”</span>?
+              Anything branching from it will reconnect to the step above.
+            </>
+          }
+          confirmLabel="Delete node"
+          onConfirm={() => {
+            setConfirmingDelete(false);
+            deleteNode(node.id);
+          }}
+          onCancel={() => setConfirmingDelete(false)}
+        />
+      )}
     </aside>
   );
 }

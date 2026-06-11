@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useRoadmapStore } from "../store/roadmapStore";
 import type { RoadmapListItem } from "../types/roadmap";
 import { TopBar } from "./Nav";
+import { ConfirmDeleteModal } from "./ConfirmDeleteModal";
 import { Icon } from "./icons";
 
 /**
@@ -69,6 +70,7 @@ function RoadmapCard({ item }: { item: RoadmapListItem }) {
 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(item.title);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const subtitle = [item.topic, item.level].filter(Boolean).join(" · ");
   const created = new Date(item.created_at).toLocaleDateString(undefined, {
@@ -76,12 +78,6 @@ function RoadmapCard({ item }: { item: RoadmapListItem }) {
     month: "short",
     day: "numeric",
   });
-
-  const onDelete = () => {
-    if (window.confirm(`Delete "${item.title}"? This can't be undone.`)) {
-      void deleteRoadmap(item.id);
-    }
-  };
 
   const startEditing = () => {
     setDraft(item.title);
@@ -147,7 +143,7 @@ function RoadmapCard({ item }: { item: RoadmapListItem }) {
           {item.progress_percentage > 0 ? "Continue" : "Open"}
         </button>
         <button
-          onClick={onDelete}
+          onClick={() => setConfirmingDelete(true)}
           aria-label="Delete roadmap"
           title="Delete"
           className="pf-btn pf-btn--danger"
@@ -156,6 +152,24 @@ function RoadmapCard({ item }: { item: RoadmapListItem }) {
           <Icon.trash />
         </button>
       </div>
+
+      {confirmingDelete && (
+        <ConfirmDeleteModal
+          title="Delete roadmap"
+          body={
+            <>
+              Delete <span className="font-medium text-text">“{item.title}”</span>?
+              Your progress on it will be lost. This can&rsquo;t be undone.
+            </>
+          }
+          confirmLabel="Delete roadmap"
+          onConfirm={() => {
+            setConfirmingDelete(false);
+            void deleteRoadmap(item.id);
+          }}
+          onCancel={() => setConfirmingDelete(false)}
+        />
+      )}
     </div>
   );
 }
