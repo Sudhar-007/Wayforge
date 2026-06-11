@@ -19,7 +19,7 @@ export const STATUS_GLYPHS: Record<NodeStatus, string> = {
 /**
  * Background tint applied to a node by status. Full literal class strings (no
  * interpolation) so Tailwind's content scanner emits them. Maps onto the Wayforge
- * `status-*` design tokens (see src/export/DESIGN-TOKENS.md).
+ * `status-*` design tokens (see src/styles/wayforge.tokens.css).
  */
 export const STATUS_NODE_TINT: Record<NodeStatus, string> = {
   not_started: "bg-node-surface",

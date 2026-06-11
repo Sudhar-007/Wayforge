@@ -1,7 +1,7 @@
 /**
- * Shared icon set for the Wayforge UI. These are pure presentational SVGs ported
- * from the design spec (src/export/Reference/icons.jsx) — no app logic. Each is a
- * small functional component that spreads SVG props so callers can size/style it.
+ * Shared icon set for the Wayforge UI. These are pure presentational SVGs —
+ * no app logic. Each is a small functional component that spreads SVG props so
+ * callers can size/style it.
  */
 import type { SVGProps } from "react";
 
