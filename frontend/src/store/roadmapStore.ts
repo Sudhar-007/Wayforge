@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type {
   Roadmap,
   RoadmapNode,
+  RoadmapEdge,
   RoadmapResource,
   RoadmapListItem,
   NodeStatus,
@@ -235,6 +236,35 @@ interface RoadmapStore {
   removeResource: (id: string, index: number) => void;
   addChildNode: (parentId: string, input: BranchInput) => void;
   deleteNode: (id: string) => void;
+}
+
+/**
+ * Repair structural inconsistencies in a roadmap document before it enters the
+ * editor, so layout and editing never see a malformed graph: drops duplicate
+ * node ids, edges pointing at missing nodes (these crash Dagre), self-loops,
+ * duplicate edge ids, and duplicate source→target pairs.
+ */
+function normalizeRoadmap(roadmap: Roadmap): Roadmap {
+  const nodeIds = new Set<string>();
+  const nodes = roadmap.nodes.filter((node) => {
+    if (nodeIds.has(node.id)) return false;
+    nodeIds.add(node.id);
+    return true;
+  });
+
+  const edgeIds = new Set<string>();
+  const pairs = new Set<string>();
+  const edges = roadmap.edges.filter((edge) => {
+    if (edge.source === edge.target) return false;
+    if (!nodeIds.has(edge.source) || !nodeIds.has(edge.target)) return false;
+    const pair = `${edge.source}→${edge.target}`;
+    if (edgeIds.has(edge.id) || pairs.has(pair)) return false;
+    edgeIds.add(edge.id);
+    pairs.add(pair);
+    return true;
+  });
+
+  return { ...roadmap, nodes, edges };
 }
 
 /** Immutably apply `patch` to the node with `id` inside a roadmap. */
@@ -528,9 +558,17 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
   },
 
   // Dagre runs exactly once here. Subsequent edits never trigger relayout.
-  // A fresh load (generate or open) starts clean — no unsaved edits.
-  loadRoadmap: (roadmap) =>
-    set({ roadmap, positions: computeDagreLayout(roadmap), isDirty: false }),
+  // A fresh load (generate or open) starts clean — no unsaved edits. Documents
+  // are normalized first so a malformed payload (dangling edges, duplicates)
+  // can't crash layout or leave the editor inconsistent.
+  loadRoadmap: (roadmap) => {
+    const normalized = normalizeRoadmap(roadmap);
+    set({
+      roadmap: normalized,
+      positions: computeDagreLayout(normalized),
+      isDirty: false,
+    });
+  },
 
   // Manual path: start from a blank canvas with just a title. No backend call —
   // the empty roadmap goes straight into the viewer, where the guided
@@ -871,17 +909,109 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
     set((state) => {
       if (!state.roadmap) return state;
 
+      const incoming = state.roadmap.edges.filter((e) => e.target === id);
+      const outgoing = state.roadmap.edges.filter((e) => e.source === id);
+      const remaining = state.roadmap.edges.filter(
+        (e) => e.source !== id && e.target !== id,
+      );
+
+      // Bridge every parent of the deleted node to every child so removing a
+      // mid-path node never splits the roadmap into disconnected pieces. Pairs
+      // already linked in either direction are skipped (same direction would
+      // duplicate the edge; reverse would create a cycle), and a bridged path
+      // is only "required" when both legs through the deleted node were
+      // required.
+      const bridges: RoadmapEdge[] = [];
+      for (const inEdge of incoming) {
+        for (const outEdge of outgoing) {
+          if (inEdge.source === outEdge.target) continue;
+          const connected =
+            remaining.some(
+              (e) =>
+                (e.source === inEdge.source && e.target === outEdge.target) ||
+                (e.source === outEdge.target && e.target === inEdge.source),
+            ) ||
+            bridges.some(
+              (b) => b.source === inEdge.source && b.target === outEdge.target,
+            );
+          if (connected) continue;
+          bridges.push({
+            id: crypto.randomUUID(),
+            source: inEdge.source,
+            target: outEdge.target,
+            type:
+              inEdge.type === "required" && outEdge.type === "required"
+                ? "required"
+                : "optional",
+          });
+        }
+      }
+
       const positions = { ...state.positions };
+      const deletedPos = positions[id];
       delete positions[id];
+
+      // Close the vertical hole the deleted node leaves behind: descendants
+      // that were reachable only through it slide up by one rank, so the chain
+      // visually merges with the branch above instead of floating below a gap
+      // (nodes aren't draggable, so a leftover gap couldn't be fixed by hand).
+      // Descendants that another branch still anchors stay where they are.
+      if (deletedPos && outgoing.length > 0) {
+        const childrenOf = new Map<string, string[]>();
+        for (const e of remaining) {
+          const list = childrenOf.get(e.source);
+          if (list) list.push(e.target);
+          else childrenOf.set(e.source, [e.target]);
+        }
+
+        // Everything reachable from the graph's roots without passing through
+        // the deleted node keeps its anchor. Roots come from the pre-delete
+        // edge set so the deleted node's own children don't count as roots.
+        const hadIncoming = new Set(state.roadmap.edges.map((e) => e.target));
+        const anchored = new Set<string>();
+        const walk = state.roadmap.nodes
+          .filter((n) => n.id !== id && !hadIncoming.has(n.id))
+          .map((n) => n.id);
+        while (walk.length > 0) {
+          const current = walk.pop()!;
+          if (anchored.has(current)) continue;
+          anchored.add(current);
+          for (const child of childrenOf.get(current) ?? []) walk.push(child);
+        }
+
+        const orphans = new Set<string>();
+        const orphanWalk = outgoing
+          .map((e) => e.target)
+          .filter((t) => !anchored.has(t));
+        while (orphanWalk.length > 0) {
+          const current = orphanWalk.pop()!;
+          if (orphans.has(current)) continue;
+          orphans.add(current);
+          for (const child of childrenOf.get(current) ?? []) {
+            if (!anchored.has(child)) orphanWalk.push(child);
+          }
+        }
+
+        // Shift by the gap to the nearest orphaned child, putting it in the
+        // deleted node's row.
+        const gaps = outgoing
+          .map((e) => e.target)
+          .filter((t) => orphans.has(t) && positions[t])
+          .map((t) => positions[t].y - deletedPos.y);
+        const deltaY = gaps.length > 0 ? Math.min(...gaps) : 0;
+        if (deltaY > 0) {
+          for (const orphanId of orphans) {
+            const pos = positions[orphanId];
+            if (pos) positions[orphanId] = { x: pos.x, y: pos.y - deltaY };
+          }
+        }
+      }
 
       return {
         roadmap: {
           ...state.roadmap,
           nodes: state.roadmap.nodes.filter((n) => n.id !== id),
-          // Drop any edge that references the deleted node. The visual gap stays.
-          edges: state.roadmap.edges.filter(
-            (e) => e.source !== id && e.target !== id,
-          ),
+          edges: [...remaining, ...bridges],
         },
         positions,
         selectedNodeId: state.selectedNodeId === id ? null : state.selectedNodeId,
