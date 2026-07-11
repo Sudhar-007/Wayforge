@@ -8,6 +8,7 @@ renders it as an editable directed acyclic graph (DAG) styled similarly to
 roadmap.sh. Sign in with GitHub to save roadmaps to your account, track
 progress, and edit topics inline.
 
+
 ## Features
 
 - **AI roadmap generation** — a multi-stage pipeline (intent → search → scrape →
@@ -136,17 +137,82 @@ npm run dev          # http://localhost:5173
 The frontend reads `VITE_API_BASE_URL` (default `http://localhost:8000`) — see
 `frontend/.env.example`.
 
-## Testing the pipeline
+## Deployment
 
-With the backend running:
+The backend is containerized (`Dockerfile`, built from the repo root) and runs on
+**Azure Container Apps**; the frontend is a static Vite build served by **Azure
+Static Web Apps**; persistence is **Azure Database for PostgreSQL**. Postgres TLS
+is enabled per-driver via the `DB_SSL` env var. Prod required env vars are listed
+in `backend/.env.example` plus the frontend's build-time `VITE_API_BASE_URL`.
 
-```bash
-cd backend
-python check_env.py       # verify keys + backend are up
-# then POST to /generate (see backend/TESTING_GUIDE.md for a curl example)
-```
+The frontend is built with `cd frontend && npm run build` (outputs `frontend/dist`)
+and shipped with `deploy-swa.sh`; the backend image is built from the repo root
+(`docker build -f Dockerfile .`).
 
-See `backend/TESTING_GUIDE.md` for details.
+DNS is hosted on **Cloudflare** (registration stays at the registrar), with the
+apex resolved via Cloudflare's CNAME flattening to the Static Web App hostname —
+see the incident below for why.
+
+## Incidents & fixes
+
+Real problems hit in production and how they were resolved.
+
+### DNS/SSL outage: stale apex IP after Azure rotated addresses (July 2026)
+
+**Symptom.** `https://wayforge.page` started failing for all visitors with
+`NET::ERR_CERT_COMMON_NAME_INVALID`, after roughly two weeks of working fine.
+Because `.page` is an HSTS-preloaded TLD, browsers force HTTPS — so there was
+no way to even reach the site past the certificate error.
+
+**Diagnosis.** `nslookup` showed the apex resolving to an IP outside Azure's
+ranges. The registrar's DNS zone looked correct — an ANAME (apex alias) record
+pointing at the Static Web App hostname — but the registrar's ANAME
+*flattening* was answering queries with a stale IP. Root cause chain: apex
+domains can't hold a CNAME per the DNS spec, Azure Static Web Apps only
+guarantees a hostname (not a static IP), the registrar's ANAME feature bridges
+that gap by resolving the hostname server-side — and when Azure rotated the
+IPs behind the hostname, the registrar's flattening kept serving the old
+answer. Traffic landed on a server that wasn't ours, which presented a
+certificate for a different domain.
+
+**Fix.** Migrated DNS hosting (nameservers only — registration unchanged) to
+Cloudflare, whose native apex CNAME flattening re-resolves the target
+continuously. Re-validated the custom domain in Azure via a TXT ownership
+record, after which Azure re-issued the managed TLS certificate. The apex now
+tracks Azure's hostname live, so future IP rotations are handled
+automatically.
+
+**Lessons.**
+- An apex record that stores a fixed IP (or flattens to a stale one) is a
+  time bomb when the host only promises a hostname.
+- This failed *silently* — nothing in the app changed, no alert fired. An
+  external uptime check would have caught it in minutes instead of by chance.
+- Control plane vs data plane: the app itself was healthy the whole time;
+  only the path to it broke.
+
+## Known limitations & tradeoffs
+
+Deliberate tradeoffs and known rough edges, with root causes where diagnosed.
+
+- **Cold starts (~15–40 s).** The backend runs on Azure Container Apps with
+  **scale-to-zero** to keep hosting costs near zero for a portfolio project.
+  The first request after an idle period has to pull and boot the container,
+  so initial generation or login after inactivity is noticeably slow.
+  Tradeoff accepted: cost over latency.
+- **Stale open tabs can hang.** If the app is left open long enough for the
+  backend to scale to zero, the next API call from that tab can appear to
+  load indefinitely. Root cause: frontend fetches have no timeout /
+  `AbortController`, so a request that arrives mid-cold-start waits silently.
+  Planned fix: a warm-up ping on tab visibility change plus fetch timeouts
+  with a "waking the server up" state in the UI.
+- **Generation is intentionally rate-limited** (3/hour, 15/day per user plus
+  a global daily ceiling) to cap LLM API spend. Heavy exploration will hit
+  the limit by design.
+- **LLM output quality varies.** Generation uses a fast, low-cost Gemini
+  model; the validate step catches structural problems, but resource
+  relevance and topic granularity can still vary between runs.
+- **No offline/unsaved-work protection.** Edits live in client state until
+  saved; closing the tab before saving loses them.
 
 ## Security
 
@@ -163,18 +229,6 @@ See `backend/TESTING_GUIDE.md` for details.
 - **Dependencies** are pinned for reproducible builds.
 
 Found something? Please open a private security advisory rather than a public issue.
-
-## Deployment
-
-The backend is containerized (`Dockerfile`, built from the repo root) and runs on
-**Azure Container Apps**; the frontend is a static Vite build served by **Azure
-Static Web Apps**; persistence is **Azure Database for PostgreSQL**. Postgres TLS
-is enabled per-driver via the `DB_SSL` env var. Prod required env vars are listed
-in `backend/.env.example` plus the frontend's build-time `VITE_API_BASE_URL`.
-
-The frontend is built with `cd frontend && npm run build` (outputs `frontend/dist`)
-and shipped with `deploy-swa.sh`; the backend image is built from the repo root
-(`docker build -f Dockerfile .`).
 
 ## Status
 
