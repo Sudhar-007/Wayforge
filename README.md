@@ -8,6 +8,7 @@ renders it as an editable directed acyclic graph (DAG) styled similarly to
 roadmap.sh. Sign in with GitHub to save roadmaps to your account, track
 progress, and edit topics inline.
 
+<img width="1705" height="992" alt="image" src="https://github.com/user-attachments/assets/2023ada1-e2c9-43d0-8c67-557139eb4a0e" />
 
 ## Features
 
