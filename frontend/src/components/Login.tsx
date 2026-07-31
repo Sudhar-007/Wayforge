@@ -20,15 +20,20 @@ export function Login() {
   const error = useRoadmapStore((s) => s.generationError);
 
   // `/auth/github` is the first backend call in the flow, so it's what cold-starts
-  // the scaled-to-zero backend. Show a loading screen while it's in flight; on
-  // success the store redirects to GitHub (page unloads), on failure it sets an
-  // error and we drop back to the form. (Auth logic itself is unchanged.)
+  // the scaled-to-zero backend (the store retries through the wake-up, which can
+  // take ~30s). Show a loading screen while it's in flight; on success the store
+  // redirects to GitHub (page unloads), on failure it sets an error and we drop
+  // back to the form. The `finally` matters: without it a rejected request would
+  // leave this screen stuck on "Connecting to GitHub…" forever.
   const [connecting, setConnecting] = useState(false);
 
   const onGitHub = async () => {
     setConnecting(true);
-    await initiateGitHubLogin();
-    setConnecting(false); // only reached if the redirect didn't happen (failure)
+    try {
+      await initiateGitHubLogin();
+    } finally {
+      setConnecting(false); // only reached if the redirect didn't happen
+    }
   };
 
   if (connecting) {

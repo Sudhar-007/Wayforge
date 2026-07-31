@@ -26,8 +26,17 @@ export default function App() {
   //    token, populate the user, strip the token from the URL, and route onward.
   //  - Otherwise, restore any persisted session.
   useEffect(() => {
-    const { setAuth, loadCurrentUser, setView, resumePendingCreation } =
-      useRoadmapStore.getState();
+    const {
+      setAuth,
+      loadCurrentUser,
+      setView,
+      resumePendingCreation,
+      warmUpBackend,
+    } = useRoadmapStore.getState();
+
+    // The backend scales to zero; start waking it the moment the app loads so
+    // the container is up by the time the user clicks anything.
+    warmUpBackend();
 
     if (window.location.pathname === "/auth/callback") {
       const token = new URLSearchParams(window.location.search).get("token");

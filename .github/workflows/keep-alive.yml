@@ -1,0 +1,34 @@
+name: Keep API awake
+
+# The backend runs on Azure Container Apps with scale-to-zero. Scaling down after
+# a few idle minutes is fine and intentional (it is what keeps the bill near
+# nothing), but after several days with no traffic at all the platform tears down
+# the revision's KEDA http-scaler. The next request then lands on an app with no
+# replicas and no working scaler, and gets answered by the Azure edge instead of
+# waking the container — an edge response carries no CORS headers, so the browser
+# reports it as a CORS failure and the site appears dead.
+#
+# One request per hour keeps that scaler alive. It wakes the container for ~5
+# minutes an hour, which at 0.25 vCPU / 0.5 GiB stays inside the free monthly
+# Container Apps grant.
+#
+# Note: GitHub disables scheduled workflows in a repo with no commits for 60
+# days. If the repo goes quiet that long, re-enable this from the Actions tab.
+
+on:
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /health
+        run: |
+          curl -fsS \
+            --max-time 150 \
+            --retry 3 \
+            --retry-all-errors \
+            --retry-delay 20 \
+            https://pathfinder-api.jollyflower-7f6656d7.southeastasia.azurecontainerapps.io/health

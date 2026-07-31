@@ -151,6 +151,46 @@ const INITIAL_FORM: RoadmapForm = {
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
+// --- Cold-start resilience -------------------------------------------------
+// The backend runs on Azure Container Apps with scale-to-zero. Waking it takes
+// ~20-30s (image pull + uvicorn start), and after a multi-day idle the first
+// request can be answered by the Azure edge *instead of* the container — an
+// edge response carries no Access-Control-Allow-Origin, so the browser rejects
+// it as a CORS failure and `fetch` rejects with a TypeError. Retrying a few
+// times spans the wake-up, after which the app answers normally.
+const WAKE_RETRY_DELAYS_MS = [3000, 8000, 15000];
+
+/**
+ * `fetch` that retries through a backend cold start. Retries on network-level
+ * failures (including the header-less edge responses above) and on 502/503/504,
+ * which the edge returns while the container is still coming up. Every other
+ * status — including 4xx and a genuine 500 — is returned to the caller as-is.
+ * Throws only if every attempt fails.
+ */
+async function fetchWithWake(
+  input: string,
+  init?: RequestInit,
+): Promise<Response> {
+  let lastError: unknown = new Error("Request failed");
+
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const res = await fetch(input, init);
+      if (res.status < 502 || res.status > 504) return res;
+      lastError = new Error(`Backend returned ${res.status}`);
+    } catch (err) {
+      lastError = err;
+    }
+
+    if (attempt >= WAKE_RETRY_DELAYS_MS.length) break;
+    await new Promise((resolve) =>
+      setTimeout(resolve, WAKE_RETRY_DELAYS_MS[attempt]),
+    );
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
 interface RoadmapStore {
   roadmap: Roadmap | null;
   /** Node positions, seeded once by Dagre on load, then never auto-recalculated. */
@@ -185,6 +225,8 @@ interface RoadmapStore {
   clearAuth: () => void;
   loadCurrentUser: () => Promise<void>;
   initiateGitHubLogin: () => Promise<void>;
+  /** Fire-and-forget ping that starts the scale-to-zero backend waking. */
+  warmUpBackend: () => void;
 
   // Saving the current roadmap to the user's account. `savedRoadmapId` + `isDirty`
   // are the source of truth for the save button; `saveStatus` only carries the
@@ -337,15 +379,34 @@ export const useRoadmapStore = create<RoadmapStore>((set, get) => ({
   },
 
   // Kick off the OAuth flow: ask the backend for the GitHub authorize URL, then
-  // hand the browser off to GitHub.
+  // hand the browser off to GitHub. This is the first backend call of the flow,
+  // so it is what eats the cold start — it goes through fetchWithWake and never
+  // rejects, so the caller's loading state always gets cleared.
   initiateGitHubLogin: async () => {
-    const res = await fetch(`${API_BASE_URL}/auth/github`);
-    if (!res.ok) {
-      set({ generationError: "Could not start GitHub login. Is the backend running?" });
-      return;
+    set({ generationError: null });
+    try {
+      const res = await fetchWithWake(`${API_BASE_URL}/auth/github`);
+      if (!res.ok) {
+        set({
+          generationError: "Could not start GitHub login. Please try again.",
+        });
+        return;
+      }
+      const { url } = await res.json();
+      window.location.href = url;
+    } catch {
+      set({
+        generationError:
+          "Could not reach the server — it may still be waking up. Please try again in a moment.",
+      });
     }
-    const { url } = await res.json();
-    window.location.href = url;
+  },
+
+  // Nudge the backend awake as soon as the app loads, so the container is
+  // already starting while the user reads the page instead of after they click.
+  // Deliberately fire-and-forget: no state, no error surface.
+  warmUpBackend: () => {
+    void fetch(`${API_BASE_URL}/health`).catch(() => {});
   },
 
   // Persist the current roadmap as a NEW row via POST /roadmaps. Used for the
